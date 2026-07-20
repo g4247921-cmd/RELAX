@@ -1,0 +1,546 @@
+-- Project By 👑 MasterRLX 👑 & Advanced Blackhole V3 Engine
+-- Full Features: Auto-Detect Unanchored Parts, Counter, Player Targeting, Tabs, Glassmorphism, FPS/Ping, Rainbow Border.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+local angle = 1
+local radius = 10
+local angleSpeed = 2
+local orbitHeight = 0
+local rotateActive = true
+local blackHoleActive = false
+local selectedTargetPart = nil
+local followTarget = false
+local lockTarget = false
+
+local function setupPlayer()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    local Folder = Workspace:FindFirstChild("BlackholeFolder") or Instance.new("Folder", Workspace)
+    Folder.Name = "BlackholeFolder"
+
+    local Part = Folder:FindFirstChild("CenterPart") or Instance.new("Part", Folder)
+    Part.Name = "CenterPart"
+    Part.Anchored = true
+    Part.CanCollide = false
+    Part.Transparency = 1
+
+    local Attachment1 = Part:FindFirstChild("Attachment") or Instance.new("Attachment", Part)
+
+    return humanoidRootPart, Attachment1
+end
+
+local humanoidRootPart, Attachment1 = setupPlayer()
+
+-- Network Handler
+if not getgenv().Network then
+    getgenv().Network = {
+        BaseParts = {},
+        Velocity = Vector3.new(14.46, 14.46, 14.46)
+    }
+
+    Network.RetainPart = function(part)
+        if typeof(part) == "Instance" and part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
+            if not table.find(Network.BaseParts, part) then
+                table.insert(Network.BaseParts, part)
+                pcall(function()
+                    part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+                end)
+                part.CanCollide = false
+            end
+        end
+    end
+
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+        end)
+        for _, part in pairs(Network.BaseParts) do
+            if part and part:IsDescendantOf(Workspace) and not part.Anchored then
+                part.Velocity = Network.Velocity
+            end
+        end
+    end)
+end
+
+-- Core Blackhole ForcePart Engine
+local function ForcePart(v)
+    if not blackHoleActive then return end
+
+    if v:IsA("BasePart") and not v.Anchored then
+        if v.Name == "HumanoidRootPart" or v.Name == "Head" or v.Name == "Handle" then return end
+        if v:IsDescendantOf(LocalPlayer.Character) then return end
+
+        local model = v:FindFirstAncestorOfClass("Model")
+        if model then
+            if model:FindFirstChildOfClass("Humanoid") then
+                return -- Ignore other players' characters / NPCs
+            end
+        end
+
+        for _, x in ipairs(v:GetChildren()) do
+            if x:IsA("BodyMover") or x:IsA("BodyVelocity") or x:IsA("BodyPosition") or x:IsA("BodyGyro") or x:IsA("RocketPropulsion") or x:IsA("AlignPosition") or x:IsA("Torque") then
+                x:Destroy()
+            end
+        end
+
+        v.CanCollide = false
+        if getgenv().Network and getgenv().Network.RetainPart then
+            getgenv().Network.RetainPart(v)
+        end
+
+        if not v:FindFirstChild("BlackholeTorque") then
+            local Torque = Instance.new("Torque", v)
+            Torque.Name = "BlackholeTorque"
+            Torque.Torque = Vector3.new(1e6, 1e6, 1e6)
+
+            local Attachment2 = Instance.new("Attachment", v)
+            Attachment2.Name = "BlackholeAtt"
+            Torque.Attachment0 = Attachment2
+
+            local AlignPosition = Instance.new("AlignPosition", v)
+            AlignPosition.Name = "BlackholeAlign"
+            AlignPosition.MaxForce = math.huge
+            AlignPosition.MaxVelocity = math.huge
+            AlignPosition.Responsiveness = 500
+            AlignPosition.Attachment0 = Attachment2
+            AlignPosition.Attachment1 = Attachment1
+        end
+    end
+end
+
+local function toggleBlackHole()
+    blackHoleActive = not blackHoleActive
+    if blackHoleActive then
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            ForcePart(v)
+        end
+
+        Workspace.DescendantAdded:Connect(function(v)
+            if blackHoleActive then
+                ForcePart(v)
+            end
+        end)
+
+        spawn(function()
+            while blackHoleActive and RunService.RenderStepped:Wait() do
+                if rotateActive then
+                    angle = angle + math.rad(angleSpeed)
+                end
+                local offsetX = math.cos(angle) * radius
+                local offsetZ = math.sin(angle) * radius
+
+                local targetRef = humanoidRootPart
+                if selectedTargetPart and selectedTargetPart.Parent and selectedTargetPart.Parent:FindFirstChild("Humanoid") then
+                    targetRef = selectedTargetPart
+                    if followTarget and humanoidRootPart and humanoidRootPart.Parent then
+                        humanoidRootPart.CFrame = CFrame.new(selectedTargetPart.Position + Vector3.new(0, 5, 0))
+                    end
+                end
+
+                if Attachment1 and Attachment1.Parent then
+                    Attachment1.WorldCFrame = targetRef.CFrame * CFrame.new(offsetX, orbitHeight, offsetZ)
+                end
+            end
+        end)
+    else
+        if Attachment1 then
+            Attachment1.WorldCFrame = CFrame.new(0, -10000, 0)
+        end
+        for _, part in ipairs(Workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                if part:FindFirstChild("BlackholeAlign") then part.BlackholeAlign:Destroy() end
+                if part:FindFirstChild("BlackholeTorque") then part.BlackholeTorque:Destroy() end
+                if part:FindFirstChild("BlackholeAtt") then part.BlackholeAtt:Destroy() end
+            end
+        end
+        table.clear(getgenv().Network.BaseParts)
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    humanoidRootPart, Attachment1 = setupPlayer()
+    if blackHoleActive then
+        blackHoleActive = false
+        toggleBlackHole()
+    end
+end)
+
+-- UI V3 GLASSMORPHISM & ADVANCED TABS
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "MasterRLX_BlackholeV3"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 440, 0, 520)
+MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+MainFrame.BackgroundTransparency = 0.2
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
+
+-- Rainbow Border Effect
+local RainbowStroke = Instance.new("UIStroke", MainFrame)
+RainbowStroke.Thickness = 2
+spawn(function()
+    local h = 0
+    while task.wait(0.05) do
+        h = (h + 0.01) % 1
+        RainbowStroke.Color = Color3.fromHSV(h, 0.8, 1)
+    end
+end)
+
+-- Top Bar (Minimize, Close, Title)
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundTransparency = 1
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Position = UDim2.new(0.03, 0, 0, 0)
+Title.Text = "✨ MasterRLX Blackhole V3"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 15
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+-- FPS & Ping Display
+local StatsLabel = Instance.new("TextLabel", TopBar)
+StatsLabel.Size = UDim2.new(0.3, 0, 1, 0)
+StatsLabel.Position = UDim2.new(0.45, 0, 0, 0)
+StatsLabel.Text = "FPS: 60 | Ping: 0ms"
+StatsLabel.TextColor3 = Color3.fromRGB(180, 255, 180)
+StatsLabel.TextSize = 10
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
+StatsLabel.BackgroundTransparency = 1
+
+spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local fps = math.floor(1 / RunService.RenderStepped:Wait())
+            local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+            StatsLabel.Text = "FPS: " .. fps .. " | Ping: " .. ping .. "ms"
+        end)
+    end
+end)
+
+-- Close & Minimize Buttons
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(0.92, 0, 0.2, 0)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.TextSize = 12
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
+
+local MinimizeBtn = Instance.new("TextButton", TopBar)
+MinimizeBtn.Size = UDim2.new(0, 25, 0, 25)
+MinimizeBtn.Position = UDim2.new(0.83, 0, 0.2, 0)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.TextSize = 14
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(1, 0)
+
+-- Tab Menu System
+local TabBar = Instance.new("Frame", MainFrame)
+TabBar.Size = UDim2.new(0.94, 0, 0, 35)
+TabBar.Position = UDim2.new(0.03, 0, 0.1, 0)
+TabBar.BackgroundTransparency = 1
+
+local function createTabBtn(name, posX)
+    local btn = Instance.new("TextButton", TabBar)
+    btn.Size = UDim2.new(0.23, 0, 1, 0)
+    btn.Position = UDim2.new(posX, 0, 0, 0)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamMedium
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    return btn
+end
+
+local TabHomeBtn = createTabBtn("Home", 0)
+local TabPlayersBtn = createTabBtn("Players", 0.25)
+local TabSettingsBtn = createTabBtn("Settings", 0.5)
+local TabAboutBtn = createTabBtn("About", 0.75)
+
+-- Container Pages
+local Container = Instance.new("Frame", MainFrame)
+Container.Size = UDim2.new(0.94, 0, 0.72, 0)
+Container.Position = UDim2.new(0.03, 0, 0.18, 0)
+Container.BackgroundTransparency = 1
+
+local function createPage()
+    local p = Instance.new("ScrollingFrame", Container)
+    p.Size = UDim2.new(1, 0, 1, 0)
+    p.BackgroundTransparency = 1
+    p.Visible = false
+    p.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+    p.ScrollBarThickness = 4
+    local layout = Instance.new("UIListLayout", p)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    return p
+end
+
+local HomePanel = createPage(); HomePanel.Visible = true
+local PlayersPanel = createPage()
+local SettingsPanel = createPage()
+local AboutPanel = createPage()
+
+-- Switch Tab Logic
+TabHomeBtn.MouseButton1Click:Connect(function() HomePanel.Visible = true; PlayersPanel.Visible = false; SettingsPanel.Visible = false; AboutPanel.Visible = false end)
+TabPlayersBtn.MouseButton1Click:Connect(function() HomePanel.Visible = false; PlayersPanel.Visible = true; SettingsPanel.Visible = false; AboutPanel.Visible = false end)
+TabSettingsBtn.MouseButton1Click:Connect(function() HomePanel.Visible = false; PlayersPanel.Visible = false; SettingsPanel.Visible = true; AboutPanel.Visible = false end)
+TabAboutBtn.MouseButton1Click:Connect(function() HomePanel.Visible = false; PlayersPanel.Visible = false; SettingsPanel.Visible = false; AboutPanel.Visible = true end)
+
+-- HOME PANEL (Status, Counter, Main Toggle)
+local CounterLabel = Instance.new("TextLabel", HomePanel)
+CounterLabel.Size = UDim2.new(1, 0, 0, 40)
+CounterLabel.Text = "📊 Detected Parts: 0"
+CounterLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+CounterLabel.TextSize = 14
+CounterLabel.Font = Enum.Font.GothamBold
+CounterLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+Instance.new("UICorner", CounterLabel).CornerRadius = UDim.new(0, 10)
+
+spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            local count = 0
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") and not v.Anchored then count = count + 1 end
+            end
+            CounterLabel.Text = "📊 Detected Unanchored Parts: " .. tostring(count)
+        end)
+    end
+end)
+
+local MainToggle = Instance.new("TextButton", HomePanel)
+MainToggle.Size = UDim2.new(1, 0, 0, 50)
+MainToggle.Text = "🌀 Toggle Blackhole: OFF"
+MainToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainToggle.TextSize = 14
+MainToggle.Font = Enum.Font.GothamBold
+MainToggle.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
+Instance.new("UICorner", MainToggle).CornerRadius = UDim.new(0, 10)
+
+MainToggle.MouseButton1Click:Connect(function()
+    toggleBlackHole()
+    if blackHoleActive then
+        MainToggle.Text = "🌀 Toggle Blackhole: ACTIVE"
+        MainToggle.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    else
+        MainToggle.Text = "🌀 Toggle Blackhole: OFF"
+        MainToggle.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
+    end
+end)
+
+-- PLAYERS PANEL (Search, List, Target Actions)
+local SearchBox = Instance.new("TextBox", PlayersPanel)
+SearchBox.Size = UDim2.new(1, 0, 0, 35)
+SearchBox.PlaceholderText = "🔍 Search Username / Display Name..."
+SearchBox.Text = ""
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+SearchBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+SearchBox.TextSize = 12
+Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 8)
+
+local PlayerListContainer = Instance.new("ScrollingFrame", PlayersPanel)
+PlayerListContainer.Size = UDim2.new(1, 0, 0, 180)
+PlayerListContainer.BackgroundTransparency = 1
+PlayerListContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+local pLayout = Instance.new("UIListLayout", PlayerListContainer)
+pLayout.Padding = UDim.new(0, 5)
+
+local function refreshPlayers(filter)
+    for _, c in ipairs(PlayerListContainer:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if not filter or filter == "" or p.Name:lower():find(filter:lower()) or p.DisplayName:lower():find(filter:lower()) then
+            local btn = Instance.new("TextButton", PlayerListContainer)
+            btn.Size = UDim2.new(1, 0, 0, 40)
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+            btn.Text = "      " .. p.DisplayName .. " (@" .. p.Name .. ")"
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextSize = 12
+            btn.Font = Enum.Font.GothamMedium
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+            local success, thumb = pcall(function()
+                return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size42x42)
+            end)
+            if success then
+                local icon = Instance.new("ImageLabel", btn)
+                icon.Size = UDim2.new(0, 30, 0, 30)
+                icon.Position = UDim2.new(0, 5, 0.5, -15)
+                icon.Image = thumb
+                icon.BackgroundTransparency = 1
+                Instance.new("UICorner", icon).CornerRadius = UDim.new(1, 0)
+            end
+
+            btn.MouseButton1Click:Connect(function()
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    selectedTargetPart = p.Character.HumanoidRootPart
+                    SearchBox.Text = p.Name
+                end
+            end)
+        end
+    end
+    PlayerListContainer.CanvasSize = UDim2.new(0, 0, 0, pLayout.AbsoluteContentSize.Y)
+end
+
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    refreshPlayers(SearchBox.Text)
+end)
+refreshPlayers()
+
+-- Target Action Buttons (Follow, Stop, Lock)
+local ActionFrame = Instance.new("Frame", PlayersPanel)
+ActionFrame.Size = UDim2.new(1, 0, 0, 90)
+ActionFrame.BackgroundTransparency = 1
+
+local FollowBtn = Instance.new("TextButton", ActionFrame)
+FollowBtn.Size = UDim2.new(0.48, 0, 0, 38)
+FollowBtn.Text = "🎯 Auto Follow Target: OFF"
+FollowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FollowBtn.TextSize = 11
+FollowBtn.Font = Enum.Font.GothamBold
+FollowBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+Instance.new("UICorner", FollowBtn).CornerRadius = UDim.new(0, 8)
+
+FollowBtn.MouseButton1Click:Connect(function()
+    followTarget = not followTarget
+    if followTarget then
+        FollowBtn.Text = "🎯 Auto Follow Target: ON"
+        FollowBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    else
+        FollowBtn.Text = "🎯 Auto Follow Target: OFF"
+        FollowBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    end
+end)
+
+local ResetTargetBtn = Instance.new("TextButton", ActionFrame)
+ResetTargetBtn.Size = UDim2.new(0.48, 0, 0, 38)
+ResetTargetBtn.Position = UDim2.new(0.52, 0, 0, 0)
+ResetTargetBtn.Text = "🛑 Stop / Reset Target"
+ResetTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetTargetBtn.TextSize = 11
+ResetTargetBtn.Font = Enum.Font.GothamBold
+ResetTargetBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+Instance.new("UICorner", ResetTargetBtn).CornerRadius = UDim.new(0, 8)
+
+ResetTargetBtn.MouseButton1Click:Connect(function()
+    selectedTargetPart = nil
+    followTarget = false
+    SearchBox.Text = ""
+    FollowBtn.Text = "🎯 Auto Follow Target: OFF"
+    FollowBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+end)
+
+-- SETTINGS PANEL (Sliders: Radius, Speed, Height, Rotate Toggle)
+local function createSlider(name, min, max, default, callback)
+    local f = Instance.new("Frame", SettingsPanel)
+    f.Size = UDim2.new(1, 0, 0, 50)
+    f.BackgroundTransparency = 1
+
+    local lbl = Instance.new("TextLabel", f)
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.Text = name .. ": " .. default
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+    lbl.TextSize = 12
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.BackgroundTransparency = 1
+
+    local box = Instance.new("TextBox", f)
+    box.Size = UDim2.new(1, 0, 0, 26)
+    box.Position = UDim2.new(0, 0, 0.45, 0)
+    box.Text = tostring(default)
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    box.TextSize = 12
+    box.Font = Enum.Font.Gotham
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+
+    box.FocusLost:Connect(function()
+        local v = tonumber(box.Text)
+        if v then
+            v = math.clamp(v, min, max)
+            box.Text = tostring(v)
+            lbl.Text = name .. ": " .. v
+            callback(v)
+        else
+            box.Text = tostring(default)
+        end
+    end)
+end
+
+createSlider("Radius Blackhole", 1, 1000, 10, function(v) radius = v end)
+createSlider("Rotation Speed", 1, 500, 2, function(v) angleSpeed = v end)
+createSlider("Orbit Height", -50, 50, 0, function(v) orbitHeight = v end)
+
+local RotateToggle = Instance.new("TextButton", SettingsPanel)
+RotateToggle.Size = UDim2.new(1, 0, 0, 35)
+RotateToggle.Text = "🔄 Toggle Rotate: ON"
+RotateToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+RotateToggle.TextSize = 12
+RotateToggle.Font = Enum.Font.GothamBold
+RotateToggle.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+Instance.new("UICorner", RotateToggle).CornerRadius = UDim.new(0, 8)
+
+RotateToggle.MouseButton1Click:Connect(function()
+    rotateActive = not rotateActive
+    if rotateActive then
+        RotateToggle.Text = "🔄 Toggle Rotate: ON"
+        RotateToggle.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    else
+        RotateToggle.Text = "🔄 Toggle Rotate: OFF"
+        RotateToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    end
+end)
+
+-- ABOUT PANEL
+local AboutText = Instance.new("TextLabel", AboutPanel)
+AboutText.Size = UDim2.new(1, 0, 1, 0)
+AboutText.Text = "👑 MasterRLX Blackhole V3\n\n✨ Features:\n- Realtime Unanchored Part Auto-Detect\n- Advanced Player Targeting & Auto-Follow\n- Custom Glassmorphism UI & Rainbow Border\n- Optimized Network Simulation Radius\n\n🕊️ Dev by anjaszrelaxz"
+AboutText.TextColor3 = Color3.fromRGB(200, 200, 200)
+AboutText.TextSize = 13
+AboutText.Font = Enum.Font.Gotham
+AboutText.TextWrapped = true
+AboutText.BackgroundTransparency = 1
+
+-- Minimize & Close Button Functionality
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Container.Visible = not minimized
+    TabBar.Visible = not minimized
+    if minimized then
+        MainFrame.Size = UDim2.new(0, 440, 0, 45)
+        MinimizeBtn.Text = "+"
+    else
+        MainFrame.Size = UDim2.new(0, 440, 0, 520)
+        MinimizeBtn.Text = "-"
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    if blackHoleActive then toggleBlackHole() end
+    ScreenGui:Destroy()
+end)
