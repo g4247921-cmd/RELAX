@@ -11,6 +11,8 @@ local ReplicatedStorage = Services.ReplicatedStorage
 local Lighting          = Services.Lighting
 local RunService        = Services.RunService
 local Workspace         = Services.Workspace
+local CoreGui           = Services.CoreGui
+local TweenService      = Services.TweenService
 
 --[[ Dependencies ]]--
 
@@ -62,7 +64,7 @@ local GetPlayerList = function()
     return Plrs
 end
 
---[[ Client ]]--
+--[[ Client Features ]]--
 
 local isFlying = false
 local FlyingSpeed = 50
@@ -628,15 +630,28 @@ local SellTrees = function()
     Teleport(CurrentPosition)
 end
 
---[[ UI Initialization (Venyx UI) ]]--
+--[[ UI Initialization (Professional Dark Theme) ]]--
 
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
-local Interface = Library.new("Aurora | Updated & Optimized", 5013109572)
+local Interface = Library.new("✨ RLX HUB | Lumber Tycoon 2", 5013109572)
+
+--[[ Customization Professional Theme ]]--
+pcall(function()
+    for _, v in next, CoreGui:GetChildren() do
+        if v:FindFirstChild("Main") then
+            local main = v.Main
+            main.BackgroundColor3 = Color3.fromRGB(18, 18, 24) -- Deep Charcoal
+            if main:FindFirstChild("TopBar") then
+                main.TopBar.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+            end
+        end
+    end
+end)
 
 --[[ Player Tab ]]--
 
 local Tab = Interface:addPage("Player", "6022668898")
-local Section1 = Tab:addSection("Humanoid")
+local Section1 = Tab:addSection("Humanoid Mastery")
 
 local Walkspeed = 16
 Player.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
@@ -663,12 +678,12 @@ Section1:addSlider("Fly Speed", 50, 50, 500, function(Value)
 end)
 
 local IsFlyingToggle = false
-Section1:addKeybind("Fly", Enum.KeyCode.F, function()
+Section1:addKeybind("Fly (Key)", Enum.KeyCode.F, function()
     IsFlyingToggle = not IsFlyingToggle
     PlayerFly(IsFlyingToggle)
 end)
 
-Section1:addToggle("No-Clip", false, function(State)
+Section1:addToggle("No-Clip Mode", false, function(State)
     if State then
         NoClip()
     else
@@ -679,7 +694,7 @@ Section1:addToggle("No-Clip", false, function(State)
     end
 end)
 
-local Section2Tools = Tab:addSection("Other Tools")
+local Section2Tools = Tab:addSection("Utility Tools")
 Section2Tools:addToggle("Hard Dragger", false, function(State)
     if State then
         HardDragger()
@@ -695,7 +710,7 @@ Section2Tools:addButton("Long Wire", LongWire)
 Section2Tools:addButton("B-Tools", BTools)
 Section2Tools:addButton("Safe Suicide", SafeSuicide)
 
-local Section3 = Tab:addSection("Teleports")
+local Section3 = Tab:addSection("Navigation Hub")
 local Locations = {
     ["Spawn"]           = CFrame.new(172.4, 3, 45),
     ["WoodRUs"]         = CFrame.new(250.868, 3, 57.6917),
@@ -729,7 +744,7 @@ Section3:addDropdown("Teleport To Player", GetPlayerList(), function(Selected)
     end
 end)
 
-Section3:addKeybind("Teleport Key", Enum.KeyCode.G, function()
+Section3:addKeybind("Click Teleport (G)", Enum.KeyCode.G, function()
     if Mouse.Target then
         Teleport(CFrame.new(Mouse.Hit.Position) + Vector3.new(0, 5, 0))
     end
@@ -737,52 +752,52 @@ end)
 
 --[[ Game Tab ]]--
 
-local Tab2 = Interface:addPage("Game", "6022668898")
-local SecLighting = Tab2:addSection("Lighting")
+local Tab2 = Interface:addPage("World", "6022668898")
+local SecLighting = Tab2:addSection("Environment")
 
 SecLighting:addToggle("Always Day", false, function(State) AlwaysDay = State end)
 SecLighting:addToggle("Always Night", false, function(State) AlwaysNight = State end)
-SecLighting:addToggle("Shadows", true, function(State) Lighting.GlobalShadows = State end)
+SecLighting:addToggle("Dynamic Shadows", true, function(State) Lighting.GlobalShadows = State end)
 SecLighting:addButton("Remove Spooky Mode", RemoveSpookMode)
 
-local SecGame = Tab2:addSection("World")
+local SecGame = Tab2:addSection("Map Modifications")
 SecGame:addToggle("Walk On Water", false, function(State) ChangeWater("CanCollide", State) end)
 SecGame:addToggle("Remove Water", false, function(State) ChangeWater("Transparency", State and 1 or 0) end)
 SecGame:addToggle("Bridge Down", false, BridgeDown)
 SecGame:addButton("Get Green Box", GetGreenBox)
 
-local SecVehicle = Tab2:addSection("Vehicle")
+local SecVehicle = Tab2:addSection("Vehicle Control")
 SecVehicle:addSlider("Vehicle Speed", 1, 1, 6, VehicleSpeed)
 SecVehicle:addButton("Flip Vehicle", FlipVehicle)
 
 --[[ Slot Tab ]]--
 
-local Tab3 = Interface:addPage("Slot", "6022668898")
-local SecSlot = Tab3:addSection("Save/Load")
+local Tab3 = Interface:addPage("Property", "6022668898")
+local SecSlot = Tab3:addSection("Save & Load Slots")
 
 local SlotNumber = 1
-SecSlot:addSlider("Slot", 1, 1, 6, function(Value) SlotNumber = Value end)
+SecSlot:addSlider("Slot Selection", 1, 1, 6, function(Value) SlotNumber = Value end)
 SecSlot:addButton("Load Slot", function()
     LoadSlot(SlotNumber)
 end)
 SecSlot:addButton("Force Save Slot", ForceSave)
 
-local SecProp = Tab3:addSection("Property")
+local SecProp = Tab3:addSection("Land Management")
 SecProp:addButton("Free Land", FreeLand)
 SecProp:addButton("Max Land", MaxLand)
 SecProp:addButton("Sell Sold Sign", SellSoldSign)
 SecProp:addButton("Anti Blacklist", AntiBlacklist)
 
-local SecDupe = Tab3:addSection("Dupes")
+local SecDupe = Tab3:addSection("Exploits & Dupes")
 SecDupe:addButton("Dupe Inventory", AxeDupe)
 
 --[[ Auto Buy Tab ]]--
 
-local Tab4 = Interface:addPage("Auto Buy", "6022668898")
-local SecBuy = Tab4:addSection("Shop")
+local Tab4 = Interface:addPage("Shop", "6022668898")
+local SecBuy = Tab4:addSection("Auto Purchase")
 
 local AutoBuyAmount = 1
-SecBuy:addSlider("Amount", 1, 1, 100, function(Value) AutoBuyAmount = Value end)
+SecBuy:addSlider("Purchase Quantity", 1, 1, 100, function(Value) AutoBuyAmount = Value end)
 
 local AutoBuyItem = "Basic Hatchet"
 local successList, dynamicList = pcall(autoBuyList)
@@ -790,56 +805,67 @@ SecBuy:addDropdown("Select Item", successList and dynamicList or {"Basic Hatchet
     AutoBuyItem = Selected
 end)
 
-SecBuy:addButton("Purchase Selected Item", function()
-    -- Fungsi pembelian otomatis dipanggil di sini
+SecBuy:addButton("Execute Purchase", function()
 end)
 
-SecBuy:addButton("Abort", function()
-    -- Menghentikan proses beli
+SecBuy:addButton("Abort Operation", function()
+    AbortGetTree = true
 end)
 
 --[[ Wood Tab ]]--
 
-local Tab5 = Interface:addPage("Wood", "6022668898")
-local SectionWood1 = Tab5:addSection("Get Tree")
+local Tab5 = Interface:addPage("Logging", "6022668898")
+local SectionWood1 = Tab5:addSection("Automated Logging")
 
 local TreeAmount = 1
-SectionWood1:addSlider("Amount", 1, 1, 30, function(Value)
+SectionWood1:addSlider("Tree Amount", 1, 1, 30, function(Value)
     TreeAmount = Value
 end)
 
 local SelectedTree = "Generic"
-SectionWood1:addDropdown("Select Tree", {"Generic", "Cherry", "Oak", "Volcano", "GreenSwampy", "GoldSwampy", "Koa", "Walnut", "CaveCrawler", "SnowGlow", "Pine", "Palm", "Frost"}, function(Selected)
+SectionWood1:addDropdown("Select Tree Type", {"Generic", "Cherry", "Oak", "Volcano", "GreenSwampy", "GoldSwampy", "Koa", "Walnut", "CaveCrawler", "SnowGlow", "Pine", "Palm", "Frost"}, function(Selected)
     SelectedTree = Selected
 end)
 
-SectionWood1:addButton("Get Selected Tree", function()
+SectionWood1:addButton("Harvest Selected Tree", function()
     GetTree(SelectedTree, TreeAmount)
 end)
 
-SectionWood1:addButton("Abort", function()
+SectionWood1:addButton("Abort Harvesting", function()
     AbortGetTree = true
 end)
 
-local SectionWood2 = Tab5:addSection("Other")
-SectionWood2:addButton("Bring Trees", function()
+local SectionWood2 = Tab5:addSection("Log Logistics")
+SectionWood2:addButton("Bring All Logs", function()
     BringTrees()
 end)
 
-SectionWood2:addButton("Sell Trees", function()
+SectionWood2:addButton("Sell All Logs", function()
     SellTrees()
 end)
 
 --[[ Settings Tab ]]--
 
 local Tab6 = Interface:addPage("Settings", "6031280882")
-local SectionSettings1 = Tab6:addSection("UI")
+local SectionSettings1 = Tab6:addSection("Interface Preferences")
 
-SectionSettings1:addKeybind("Toggle Keybind", Enum.KeyCode.LeftShift, function()
+SectionSettings1:addKeybind("Toggle UI Keybind", Enum.KeyCode.LeftShift, function()
     Interface:toggle()
 end)
 
 -- Pilih halaman pertama saat pertama kali dibuka
 Interface:SelectPage(Interface.pages[1], true)
 
-print("Aurora UI & All Features Loaded Successfully!")
+-- Penyesuaian posisi otomatis untuk tombol/icon buka-tutup agar pas di tengah sebelah kiri layar
+task.spawn(function()
+    task.wait(0.4)
+    pcall(function()
+        for _, gui in next, CoreGui:GetChildren() do
+            if gui:FindFirstChild("Main") and gui.Main:FindFirstChild("Toggle") then
+                gui.Main.Toggle.Position = UDim2.new(0, 10, 0.5, -20)
+            end
+        end
+    end)
+end)
+
+print("✨ RLX HUB (Professional Edition) Loaded Successfully!")
