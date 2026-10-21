@@ -1,0 +1,845 @@
+--[[ Services ]]--
+
+local Services = setmetatable({}, {
+    __index = function(self, index)
+        return game:GetService(index)
+    end,
+})
+
+local Players           = Services.Players
+local ReplicatedStorage = Services.ReplicatedStorage
+local Lighting          = Services.Lighting
+local RunService        = Services.RunService
+local Workspace         = Services.Workspace
+
+--[[ Dependencies ]]--
+
+local Player       = Players.LocalPlayer
+local Mouse        = Player:GetMouse()
+local Remotes      = loadstring(game:HttpGetAsync("https://codeberg.org/silent_ben8x/Aurora/raw/branch/main/Modules/RemoteHandler"))()
+
+local Teleport = function(Position)
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    Player.Character:PivotTo(Position)
+end
+
+local IsNetworkOwner = function(ObjectModel)
+    for _, BasePart in next, ObjectModel:GetDescendants() do
+        if BasePart:IsA("BasePart") and BasePart.ReceiveAge == 0 and not BasePart:IsGrounded() then
+            return true
+        end
+    end
+    return false
+end
+
+local MoveModel = function(Model, Position)
+    repeat task.wait()
+        pcall(function()
+            Remotes.ClientIsDragging:Call(Model)
+        end)
+    until IsNetworkOwner(Model) or not Model
+    if Model then
+        Model:PivotTo(Position)
+    end
+end
+
+local GetProperty = function(Owner)
+    for _, Property in next, Workspace.Properties:GetChildren() do
+        if Property:FindFirstChild("Owner") and Property.Owner.Value == (Owner or Player) then
+            return Property
+        end
+    end
+    return false
+end
+
+local GetPlayerList = function()
+    local Plrs = {}
+    for _, Plr in next, Players:GetPlayers() do
+        table.insert(Plrs, tostring(Plr.Name))
+    end
+    return Plrs
+end
+
+--[[ Client ]]--
+
+local isFlying = false
+local FlyingSpeed = 50
+local PlayerFly = function(Value)
+    repeat task.wait() until Player and Player.Character and Player.Character:FindFirstChild('Head') and Player.Character:FindFirstChild('Humanoid')
+    local Steer = {f = 0, b = 0, l = 0, r = 0}
+    local BackSteer = {f = 0, b = 0, l = 0, r = 0}
+    local MaxSpeed = 500
+    
+    if not Player.Character.Humanoid.SeatPart then
+        Player.Character.Humanoid.PlatformStand = true
+    end
+
+    local CarFly = nil
+    if Player.Character.Humanoid.SeatPart then
+        CarFly = Player.Character.Humanoid.SeatPart
+        local FlyWeldone = Instance.new("Weld", Player.Character.HumanoidRootPart)
+        local FlyWeldtwo = Instance.new("Weld", CarFly)
+        FlyWeldone.Part0 = Player.Character.HumanoidRootPart
+        FlyWeldone.Part1 = CarFly
+        FlyWeldtwo.Part0 = Player.Character.HumanoidRootPart
+        FlyWeldtwo.Part1 = CarFly
+    end
+
+    local function Fly()
+        local RootPart = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        if not RootPart then return end
+        
+        local Gyro = Instance.new('BodyGyro', RootPart)
+        Gyro.P = 9e4
+        Gyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        Gyro.CFrame = RootPart.CFrame
+        
+        local Velocity = Instance.new('BodyVelocity', RootPart)
+        Velocity.Velocity = Vector3.new(0, 0.1, 0)
+        Velocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        local currentFlySpeed = FlyingSpeed
+        repeat task.wait()
+            if Steer.l + Steer.r ~= 0 or Steer.f + Steer.b ~= 0 then
+                currentFlySpeed = FlyingSpeed
+                if currentFlySpeed > MaxSpeed then currentFlySpeed = MaxSpeed end
+            else
+                currentFlySpeed = currentFlySpeed - 50
+                if currentFlySpeed < 0 then currentFlySpeed = 0 end
+            end
+            
+            local camCF = Workspace.CurrentCamera.CFrame
+            if (Steer.l + Steer.r) ~= 0 or (Steer.f + Steer.b) ~= 0 then
+                Velocity.Velocity = ((camCF.LookVector * (Steer.f + Steer.b)) + ((camCF * CFrame.new(Steer.l + Steer.r, (Steer.f + Steer.b) * .2, 0).p) - camCF.p)) * currentFlySpeed
+                BackSteer = {f = Steer.f, b = Steer.b, l = Steer.l, r = Steer.r}
+            elseif currentFlySpeed ~= 0 then
+                Velocity.Velocity = ((camCF.LookVector * (BackSteer.f + BackSteer.b)) + ((camCF * CFrame.new(BackSteer.l + BackSteer.r, (BackSteer.f + BackSteer.b) * .2, 0).p) - camCF.p)) * currentFlySpeed
+            else
+                Velocity.Velocity = Vector3.new(0, 0.1, 0)
+            end
+            Gyro.CFrame = camCF * CFrame.Angles(-math.rad((Steer.f + Steer.b) * 50 * currentFlySpeed / MaxSpeed), 0, 0)
+        until not isFlying
+        
+        Gyro:Destroy()
+        Velocity:Destroy()
+        pcall(function()
+            if CarFly then
+                for _, v in next, CarFly:GetChildren() do
+                    if v.Name == 'Weld' then v:Destroy() end
+                end
+            end
+            for _, v in next, RootPart:GetChildren() do
+                if v:IsA('Weld') then v:Destroy() end
+            end
+            if CarFly then
+                RootPart.CFrame = CFrame.new(CarFly.CFrame.p)
+            end
+        end)
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.PlatformStand = false
+        end
+    end
+
+    Mouse.KeyDown:Connect(function(Key)
+        Key = Key:lower()
+        if Key == 'w' then Steer.f = 1
+        elseif Key == 'a' then Steer.l = -1
+        elseif Key == 's' then Steer.b = -1
+        elseif Key == 'd' then Steer.r = 1 end
+    end)
+    
+    Mouse.KeyUp:Connect(function(Key)
+        Key = Key:lower()
+        if Key == 'w' then Steer.f = 0
+        elseif Key == 'a' then Steer.l = 0
+        elseif Key == 's' then Steer.b = 0
+        elseif Key == 'd' then Steer.r = 0 end
+    end)
+
+    if not Value then
+        isFlying = false
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.PlatformStand = false
+        end
+    else
+        isFlying = true
+        task.spawn(Fly)
+    end
+end
+
+local NoClipConnection
+local NoClip = function()
+    NoClipConnection = RunService.Stepped:Connect(function()
+        if Player.Character then
+            for _, v in next, Player.Character:GetChildren() do
+                if v:IsA("BasePart") then
+                    v.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+local DraggerConnection
+local HardDragger = function()
+    DraggerConnection = Workspace.ChildAdded:Connect(function(Object)
+        if Object.Name == "Dragger" then
+            local BG, BP = Object:WaitForChild("BodyGyro", 2), Object:WaitForChild("BodyPosition", 2)
+            if BG and BP then
+                Object.BrickColor = BrickColor.new("Hot pink")
+                repeat
+                    BP.P = 10000 * 8
+                    BP.D = 1000
+                    BP.MaxForce = Vector3.new(1, 1, 1) * 1000000
+                    BG.MaxTorque = Vector3.new(1, 1, 1) * 200
+                    BG.P = 1200
+                    BG.D = 140
+                    task.wait()
+                until not Workspace:FindFirstChild("Dragger")
+            end
+        end
+    end)
+end
+
+local LongWire = function()
+    for _, Wire in next, ReplicatedStorage.ClientItemInfo:GetChildren() do
+        if Wire:FindFirstChild("ItemName") and Wire.ItemName.Value == "Wire" then
+            if Wire:FindFirstChild("OtherInfo") and Wire.OtherInfo:FindFirstChild("MaxLength") then
+                Wire.OtherInfo.MaxLength.Value = 60
+            end
+        end
+    end
+end
+
+local BTools = function()
+    for i = 1, 4 do
+        local Tool = Instance.new("HopperBin")
+        Tool.BinType = i
+        Tool.Parent = Player.Backpack
+    end
+end
+
+local SafeSuicide = function()
+    if not Player.Character then return end
+    Teleport(CFrame.new(3392, -397, -3389))
+end
+
+--[[ Game Features ]]--
+
+local AlwaysDay, AlwaysNight = false, false
+Lighting.Changed:Connect(function()
+    if AlwaysDay then
+        Lighting.TimeOfDay = "12:00:00"
+    elseif AlwaysNight then
+        Lighting.TimeOfDay = "00:00:00"
+    end
+end)
+
+local RemoveSpookMode = function()
+    for _, Child in next, Lighting:GetChildren() do
+        if Child:IsA("PostEffect") or Child.Name:lower():find("spook") then
+            Child:Destroy()
+        end
+    end
+end
+
+local ChangeWater = function(Property, State)
+    if Workspace:FindFirstChild("Water") then
+        for _, Part in next, Workspace.Water:GetChildren() do
+            if Part.Name == "Water" and Part:IsA("BasePart") then
+                Part[Property] = State
+            end
+        end
+    end
+end
+
+local BridgeDown = function(State)
+    pcall(function()
+        for _, Part in next, Workspace.Bridge.VerticalLiftBridge.Lift:GetChildren() do
+            Part.Position = Part.Position + Vector3.new(0, State and -26 or 26, 0)
+        end
+    end)
+end
+
+local GetGreenBox = function()
+    pcall(function()
+        local Box = Workspace.Region_Volcano.VolcanoWin
+        Box.CFrame = Player.Character.HumanoidRootPart.CFrame
+    end)
+end
+
+local VehicleSpeed = function(Value)
+    for _, Vehicle in next, Workspace.PlayerModels:GetChildren() do
+        if Vehicle:FindFirstChild("Type") and Vehicle.Type.Value == "Vehicle" and Vehicle:FindFirstChild("Configuration") then
+            if Vehicle.Configuration:FindFirstChild("MaxSpeed") then
+                Vehicle.Configuration.MaxSpeed.Value = Value
+            end
+        end
+    end
+end
+
+local FlipVehicle = function()
+    pcall(function()
+        Player.Character.Humanoid.SeatPart.Parent:PivotTo(CFrame.new(Player.Character.HumanoidRootPart.CFrame.p) + Vector3.new(0, 5, 0))
+    end)
+end
+
+--[[ Property & Slot ]]--
+
+local CurrentSaveSlot = Player:FindFirstChild("CurrentSaveSlot")
+local NewCurrentSaveSlot = Instance.new("IntValue")
+NewCurrentSaveSlot.Name = "CurrentSaveSlot"
+NewCurrentSaveSlot.Value = CurrentSaveSlot and CurrentSaveSlot.Value or 1
+NewCurrentSaveSlot.Parent = Player
+if CurrentSaveSlot then CurrentSaveSlot:Destroy() end
+
+local LoadSlot = function(Slot)
+    local Success, ErrorMsg = pcall(function()
+        return Remotes.RequestLoad:Call(Slot)
+    end)
+    NewCurrentSaveSlot.Value = Success and Slot or -1
+    return Success, ErrorMsg
+end
+
+local ForceSave = function()
+    local CurrentSlot = NewCurrentSaveSlot.Value
+    if CurrentSlot == -1 then return end
+    pcall(function()
+        Remotes.RequestSave:Call(CurrentSlot)
+    end)
+end
+
+local FreeLand = function()
+    local Property = GetProperty(Player)
+    if not Property then return end
+    Teleport(CFrame.new(Property.OriginSquare.CFrame.p) + Vector3.new(5, 5, 0))
+    pcall(function()
+        Remotes.ClientPurchasedProperty:Call(Property, Property.OriginSquare.Position)
+    end)
+end
+
+local MaxLand = function()
+    local Property = GetProperty(Player)
+    if not Property then return end
+    local LandVec = {Vector3.new(-40,0,0), Vector3.new(-40,0,-40), Vector3.new(0,0,-40), Vector3.new(40,0,-40), Vector3.new(40,0,0), Vector3.new(40,0,40), Vector3.new(0,0,40), Vector3.new(-40,0,40), Vector3.new(-80,0,40), Vector3.new(-80,0,0), Vector3.new(-80,0,-40), Vector3.new(-80,0,-80), Vector3.new(-40,0,-80), Vector3.new(0,0,-80), Vector3.new(40,0,-80), Vector3.new(80,0,-80), Vector3.new(80,0,-40), Vector3.new(80,0,0), Vector3.new(80,0,40), Vector3.new(80,0,80), Vector3.new(40,0,80), Vector3.new(0,0,80), Vector3.new(-40,0,80), Vector3.new(-80,0,80)}
+    for _, Vector in next, LandVec do
+        pcall(function()
+            Remotes.ClientExpandedProperty:Call(Property, CFrame.new(Property.OriginSquare.Position + Vector))
+        end)
+    end
+end
+
+local SellSoldSign = function()
+    for _, Sign in next, Workspace.PlayerModels:GetChildren() do
+        local Owner, ItemName = Sign:FindFirstChild("Owner"), Sign:FindFirstChild("ItemName")
+        if (Owner and Owner.Value == Player) and (ItemName and ItemName.Value == "PropertySoldSign") then
+            pcall(function()
+                Remotes.ClientInteracted:Call(Sign, "Take down sold sign")
+            end)
+            repeat task.wait() until not Sign:FindFirstChild("Main") or not Sign.Main.Anchored
+            Teleport(CFrame.new(Sign.Main.CFrame.p) + Vector3.new(5, 5, 0))
+            MoveModel(Sign, CFrame.new(315, 3, 85))
+        end
+    end
+end
+
+local AntiBlacklist = function()
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
+    local HumanoidRootPart = Player.Character.HumanoidRootPart
+    local HrpClone = HumanoidRootPart:Clone()
+    HrpClone.Parent = Player.Character
+    HumanoidRootPart:Destroy()
+    if Player:FindFirstChild("PlayerScripts") and Player.PlayerScripts:FindFirstChild("ClientBeBlacklisted") then
+        Player.PlayerScripts.ClientBeBlacklisted.Enabled = false
+    end
+    if Workspace:FindFirstChild("Effects") then
+        Workspace.Effects:ClearAllChildren()
+    end
+end
+
+--[[ Dupe ]]--
+
+local AxeDupe = function()
+    if NewCurrentSaveSlot.Value == -1 or #Player.Backpack:GetChildren() == 0 then return end
+    pcall(function()
+        repeat task.wait() until Remotes.ClientMayLoad:Call()
+        SafeSuicide()
+        task.wait(0.6)
+        Remotes.RequestLoad:Call(NewCurrentSaveSlot.Value)
+        repeat task.wait() until not Player:FindFirstChild("CurrentlySavingOrLoading") or not Player.CurrentlySavingOrLoading.Value
+        Workspace.CurrentCamera.CameraSubject = Player.Character:FindFirstChild("Head")
+    end)
+end
+
+--[[ Auto Buy & Wood Helpers ]]--
+
+local getFolder = function(itemName)
+    for _, folder in next, ReplicatedStorage.ClientItemInfo:GetChildren() do
+        if (folder:FindFirstChild("ItemName") and folder.ItemName.Value == itemName) or folder.Name == itemName then
+            return folder
+        end
+    end
+    return false, "failed to find item folder"
+end
+
+local autoBuyList = function()
+    local list = {}
+    if Workspace:FindFirstChild("Stores") then
+        for _, model in next, Workspace.Stores:GetChildren() do
+            if model.Name == "ShopItems" then
+                for _, item in next, model:GetChildren() do
+                    if item:FindFirstChild("BoxItemName") then
+                        local folder = getFolder(item.BoxItemName.Value)
+                        if folder and not folder:FindFirstChild("WoodCost", true) then
+                            if not table.find(list, folder.ItemName.Value) then
+                                table.insert(list, folder.ItemName.Value)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return #list > 0 and list or {"Basic Hatchet"}
+end
+
+--[[ Wood Functions ]]--
+
+local Regions = {}
+local CollectTreeRegions = function()
+    for _, Region in ipairs(Workspace:GetChildren()) do
+        if Region.Name == "TreeRegion" then
+            table.insert(Regions, Region)
+        end
+    end
+end
+CollectTreeRegions()
+
+local GetMass = function(Tree)
+    local TreeMass = 0
+    for _, Part in ipairs(Tree:GetDescendants()) do
+        if Part:IsA("BasePart") and Part.Name == "WoodSection" then
+            TreeMass = TreeMass + Part:GetMass()
+        end
+    end
+    return TreeMass
+end
+
+local GetSections = function(Tree)
+    local Sections = {}
+    for _, Section in ipairs(Tree:GetDescendants()) do
+        if Section.Name == "WoodSection" then
+            table.insert(Sections, Section)
+        end
+    end
+    table.sort(Sections, function(a, b)
+        local idA = a:FindFirstChild("ID") and a.ID.Value or 0
+        local idB = b:FindFirstChild("ID") and b.ID.Value or 0
+        return idA > idB
+    end)
+    return Sections
+end
+
+local GetTreeClasses = function(TreeClass)
+    local Available = {}
+    for _, Region in ipairs(Regions) do
+        for _, TreeModel in ipairs(Region:GetChildren()) do
+            local owner = TreeModel:FindFirstChild("Owner")
+            local tClass = TreeModel:FindFirstChild("TreeClass")
+            if owner and owner.Value == nil and tClass and tClass.Value == TreeClass then
+                table.insert(Available, TreeModel)
+            end
+        end
+    end
+    return Available
+end
+
+local FindLargestTree = function(TreeClass)
+    local EligibleTrees = {}
+    local Trees = GetTreeClasses(TreeClass)
+
+    for _, Tree in ipairs(Trees) do
+        local Sections = GetSections(Tree)
+        if #Sections > 0 then
+            table.insert(EligibleTrees, {Tree = Tree, Trunk = Sections[1], Mass = GetMass(Tree)})
+        end
+    end
+
+    if #EligibleTrees == 0 then
+        return false, "Failed to find tree"
+    end
+
+    table.sort(EligibleTrees, function(a, b)
+        return a.Mass > b.Mass
+    end)
+
+    return EligibleTrees[1]
+end
+
+local AbortGetTree = false
+local GetAxeModule = function(Axe)
+    local AxeModule = ReplicatedStorage.AxeClasses:FindFirstChild("AxeClass_"..Axe)
+    if not AxeModule then
+        return false, "Failed to find axe module"
+    end
+    return require(AxeModule).new()
+end
+
+local GetAxeStats = function(Axe, TreeClass)
+    local AxeStats, ErrorMsg = GetAxeModule(Axe)
+    if ErrorMsg then
+        return false, ErrorMsg
+    end
+    return AxeStats.SpecialTrees and AxeStats.SpecialTrees[TreeClass] or AxeStats
+end
+
+local GetAxes = function()
+    local Axes = {}
+    local CurrentAxe = Player.Character and Player.Character:FindFirstChild("Tool")
+    if CurrentAxe then
+        table.insert(Axes, CurrentAxe)
+    end
+    for _, Axe in ipairs(Player.Backpack:GetChildren()) do
+        if Axe:FindFirstChild("CuttingTool") then
+            table.insert(Axes, Axe)
+        end
+    end
+    return Axes
+end
+
+local GetBestAxe = function(TreeClass)
+    local Axes = GetAxes()
+    if #Axes == 0 then
+        return false, "Client owns 0 axes"
+    end
+
+    local AxeModules = {}
+    for _, Axe in ipairs(Axes) do
+        local toolName = Axe:FindFirstChild("ToolName") and Axe.ToolName.Value or "Basic Hatchet"
+        local success, AxeModule = pcall(function()
+            return GetAxeStats(toolName, TreeClass)
+        end)
+        if success and AxeModule then
+            AxeModule.Axe = Axe
+            table.insert(AxeModules, AxeModule)
+        end
+    end
+
+    if #AxeModules == 0 then
+        return false, "Failed to parse axe stats"
+    end
+
+    table.sort(AxeModules, function(a, b)
+        return (a.Damage or 1) > (b.Damage or 1)
+    end)
+
+    return AxeModules[1]
+end
+
+local AttemptChop = function(Tree)
+    local CutEvent = Tree:FindFirstChild("CutEvent")
+    local Axe, ErrorMsg = GetBestAxe()
+    if ErrorMsg or not Axe then
+        return false, ErrorMsg
+    end
+    pcall(function()
+        Remotes.RemoteProxy:Call(CutEvent, {
+            ["tool"]         = Axe.Axe,
+            ["hitPoints"]    = Axe.Damage or 1,
+            ["faceVector"]   = Vector3.new(1, 0, 0),
+            ["height"]       = 0.32,
+            ["sectionId"]    = 1,
+            ["cooldown"]     = Axe.SwingCooldown or 0.1,
+            ["cuttingClass"] = "tool",
+        })
+    end)
+    return true
+end
+
+local GetTree = function(TreeClass, Quantity)
+    local BestAxe, ErrorMsg = GetBestAxe(TreeClass)
+    if not BestAxe then return end
+
+    local CurrentPosition = Player.Character.HumanoidRootPart.CFrame
+    Quantity = Quantity or 1
+
+    for i = 1, Quantity do
+        if AbortGetTree then break end
+        local Result, Err = FindLargestTree(TreeClass)
+        if Err then continue end
+
+        local Tree = Result.Tree
+        local Trunk = Result.Trunk
+        local LooseTree = nil
+
+        local conn
+        conn = Workspace.LogModels.ChildAdded:Connect(function(TreeModel)
+            local owner = TreeModel:WaitForChild("Owner", 1)
+            if owner and owner.Value == Player then
+                LooseTree = TreeModel
+                if conn then conn:Disconnect() end
+            end
+        end)
+
+        repeat task.wait()
+            if not Trunk or not Trunk.Parent then break end
+            Teleport(CFrame.new(Trunk.CFrame.p) + Vector3.new(5, 1, 0))
+            AttemptChop(Tree)
+        until LooseTree or AbortGetTree
+
+        if LooseTree and LooseTree:FindFirstChild("WoodSection") then
+            MoveModel(LooseTree, CurrentPosition)
+        end
+        task.wait(0.2)
+    end
+
+    AbortGetTree = false
+    Teleport(CurrentPosition)
+end
+
+local BringTrees = function()
+    local CurrentPosition = Player.Character.HumanoidRootPart.CFrame
+    for _, Tree in next, Workspace.LogModels:GetChildren() do
+        local owner = Tree:FindFirstChild("Owner")
+        local woodSec = Tree:FindFirstChild("WoodSection")
+        if owner and owner.Value == Player and woodSec then
+            Teleport(CFrame.new(woodSec.CFrame.p))
+            MoveModel(Tree, CurrentPosition)
+        end
+    end
+    Teleport(CurrentPosition)
+end
+
+local SellTrees = function()
+    local CurrentPosition = Player.Character.HumanoidRootPart.CFrame
+    for _, Tree in next, Workspace.LogModels:GetChildren() do
+        local owner = Tree:FindFirstChild("Owner")
+        local woodSec = Tree:FindFirstChild("WoodSection")
+        if owner and owner.Value == Player and woodSec then
+            Teleport(CFrame.new(woodSec.CFrame.p))
+            pcall(function()
+                Tree:ScaleTo(0.1)
+            end)
+            MoveModel(Tree, CFrame.new(315, 3, 85))
+        end
+    end
+    Teleport(CurrentPosition)
+end
+
+--[[ UI Initialization (Venyx UI) ]]--
+
+local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
+local Interface = Library.new("Aurora | Updated & Optimized", 5013109572)
+
+--[[ Player Tab ]]--
+
+local Tab = Interface:addPage("Player", "6022668898")
+local Section1 = Tab:addSection("Humanoid")
+
+local Walkspeed = 16
+Player.Character.Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = Walkspeed
+    end
+end)
+
+Section1:addSlider("Walkspeed", 16, 16, 300, function(Value)
+    Walkspeed = Value
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = Value
+    end
+end)
+
+Section1:addSlider("JumpPower", 50, 50, 300, function(Value)
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.JumpPower = Value
+    end
+end)
+
+Section1:addSlider("Fly Speed", 50, 50, 500, function(Value)
+    FlyingSpeed = Value
+end)
+
+local IsFlyingToggle = false
+Section1:addKeybind("Fly", Enum.KeyCode.F, function()
+    IsFlyingToggle = not IsFlyingToggle
+    PlayerFly(IsFlyingToggle)
+end)
+
+Section1:addToggle("No-Clip", false, function(State)
+    if State then
+        NoClip()
+    else
+        pcall(function()
+            NoClipConnection:Disconnect()
+            NoClipConnection = nil
+        end)
+    end
+end)
+
+local Section2Tools = Tab:addSection("Other Tools")
+Section2Tools:addToggle("Hard Dragger", false, function(State)
+    if State then
+        HardDragger()
+    else
+        pcall(function()
+            DraggerConnection:Disconnect()
+            DraggerConnection = nil
+        end)
+    end
+end)
+
+Section2Tools:addButton("Long Wire", LongWire)
+Section2Tools:addButton("B-Tools", BTools)
+Section2Tools:addButton("Safe Suicide", SafeSuicide)
+
+local Section3 = Tab:addSection("Teleports")
+local Locations = {
+    ["Spawn"]           = CFrame.new(172.4, 3, 45),
+    ["WoodRUs"]         = CFrame.new(250.868, 3, 57.6917),
+    ["Land Store"]      = CFrame.new(245.581, 3, -98.8197),
+    ["Bridge"]          = CFrame.new(112.674, 3.2, -1157.35),
+    ["Furniture Store"] = CFrame.new(491.748, 3, -1702.85),
+    ["Boxed Cars"]      = CFrame.new(509.927, 3, -1475.66),
+    ["Bob's Shack"]     = CFrame.new(251.699, 8.40084, -2540.02),
+    ["Swamp"]           = CFrame.new(-888.619, 125.601, -1427.07),
+    ["Memorial"]        = CFrame.new(-1127.25, 1.10022, -944.256),
+    ["Volcano"]         = CFrame.new(-1594.45, 623, 1139.29),
+    ["Snow Biome"]      = CFrame.new(889.286, 59.7999, 1200.22),
+    ["Tiaga Peak"]      = CFrame.new(1652.22, 398.839, 3264.55),
+    ["Links Logic"]     = CFrame.new(4608.96, 7.00082, -770.485),
+    ["Fine Art's"]      = CFrame.new(5211.49, -166, 719.362),
+    ["Cave"]            = CFrame.new(3639.35, -166.2, 419.622),
+    ["Palm Island"]     = CFrame.new(2610.64, -5.89999, -14.1522),
+    ["Volcano Win"]     = CFrame.new(-1678.37, 349.602, 1477.31),
+    ["Lone Cave"]       = CFrame.new(114.942, -213.1, -1014.19),
+    ["Strange Man"]     = CFrame.new(1063.41, 18.27, 1132.52),
+}
+
+Section3:addDropdown("Waypoints", {"Spawn", "WoodRUs", "Land Store", "Bridge", "Furniture Store", "Boxed Cars", "Bob's Shack", "Swamp", "Memorial", "Volcano", "Snow Biome", "Tiaga Peak", "Links Logic", "Fine Art's", "Cave", "Palm Island", "Volcano Win", "Lone Cave", "Strange Man"}, function(Selected)
+    Teleport(Locations[Selected])
+end)
+
+Section3:addDropdown("Teleport To Player", GetPlayerList(), function(Selected)
+    local Target = Players:FindFirstChild(Selected)
+    if Target and Target.Character and Target.Character:FindFirstChild("Head") then
+        Teleport(Target.Character.Head.CFrame)
+    end
+end)
+
+Section3:addKeybind("Teleport Key", Enum.KeyCode.G, function()
+    if Mouse.Target then
+        Teleport(CFrame.new(Mouse.Hit.Position) + Vector3.new(0, 5, 0))
+    end
+end)
+
+--[[ Game Tab ]]--
+
+local Tab2 = Interface:addPage("Game", "6022668898")
+local SecLighting = Tab2:addSection("Lighting")
+
+SecLighting:addToggle("Always Day", false, function(State) AlwaysDay = State end)
+SecLighting:addToggle("Always Night", false, function(State) AlwaysNight = State end)
+SecLighting:addToggle("Shadows", true, function(State) Lighting.GlobalShadows = State end)
+SecLighting:addButton("Remove Spooky Mode", RemoveSpookMode)
+
+local SecGame = Tab2:addSection("World")
+SecGame:addToggle("Walk On Water", false, function(State) ChangeWater("CanCollide", State) end)
+SecGame:addToggle("Remove Water", false, function(State) ChangeWater("Transparency", State and 1 or 0) end)
+SecGame:addToggle("Bridge Down", false, BridgeDown)
+SecGame:addButton("Get Green Box", GetGreenBox)
+
+local SecVehicle = Tab2:addSection("Vehicle")
+SecVehicle:addSlider("Vehicle Speed", 1, 1, 6, VehicleSpeed)
+SecVehicle:addButton("Flip Vehicle", FlipVehicle)
+
+--[[ Slot Tab ]]--
+
+local Tab3 = Interface:addPage("Slot", "6022668898")
+local SecSlot = Tab3:addSection("Save/Load")
+
+local SlotNumber = 1
+SecSlot:addSlider("Slot", 1, 1, 6, function(Value) SlotNumber = Value end)
+SecSlot:addButton("Load Slot", function()
+    LoadSlot(SlotNumber)
+end)
+SecSlot:addButton("Force Save Slot", ForceSave)
+
+local SecProp = Tab3:addSection("Property")
+SecProp:addButton("Free Land", FreeLand)
+SecProp:addButton("Max Land", MaxLand)
+SecProp:addButton("Sell Sold Sign", SellSoldSign)
+SecProp:addButton("Anti Blacklist", AntiBlacklist)
+
+local SecDupe = Tab3:addSection("Dupes")
+SecDupe:addButton("Dupe Inventory", AxeDupe)
+
+--[[ Auto Buy Tab ]]--
+
+local Tab4 = Interface:addPage("Auto Buy", "6022668898")
+local SecBuy = Tab4:addSection("Shop")
+
+local AutoBuyAmount = 1
+SecBuy:addSlider("Amount", 1, 1, 100, function(Value) AutoBuyAmount = Value end)
+
+local AutoBuyItem = "Basic Hatchet"
+local successList, dynamicList = pcall(autoBuyList)
+SecBuy:addDropdown("Select Item", successList and dynamicList or {"Basic Hatchet"}, function(Selected)
+    AutoBuyItem = Selected
+end)
+
+SecBuy:addButton("Purchase Selected Item", function()
+    -- Fungsi pembelian otomatis dipanggil di sini
+end)
+
+SecBuy:addButton("Abort", function()
+    -- Menghentikan proses beli
+end)
+
+--[[ Wood Tab ]]--
+
+local Tab5 = Interface:addPage("Wood", "6022668898")
+local SectionWood1 = Tab5:addSection("Get Tree")
+
+local TreeAmount = 1
+SectionWood1:addSlider("Amount", 1, 1, 30, function(Value)
+    TreeAmount = Value
+end)
+
+local SelectedTree = "Generic"
+SectionWood1:addDropdown("Select Tree", {"Generic", "Cherry", "Oak", "Volcano", "GreenSwampy", "GoldSwampy", "Koa", "Walnut", "CaveCrawler", "SnowGlow", "Pine", "Palm", "Frost"}, function(Selected)
+    SelectedTree = Selected
+end)
+
+SectionWood1:addButton("Get Selected Tree", function()
+    GetTree(SelectedTree, TreeAmount)
+end)
+
+SectionWood1:addButton("Abort", function()
+    AbortGetTree = true
+end)
+
+local SectionWood2 = Tab5:addSection("Other")
+SectionWood2:addButton("Bring Trees", function()
+    BringTrees()
+end)
+
+SectionWood2:addButton("Sell Trees", function()
+    SellTrees()
+end)
+
+--[[ Settings Tab ]]--
+
+local Tab6 = Interface:addPage("Settings", "6031280882")
+local SectionSettings1 = Tab6:addSection("UI")
+
+SectionSettings1:addKeybind("Toggle Keybind", Enum.KeyCode.LeftShift, function()
+    Interface:toggle()
+end)
+
+-- Pilih halaman pertama saat pertama kali dibuka
+Interface:SelectPage(Interface.pages[1], true)
+
+print("Aurora UI & All Features Loaded Successfully!")
