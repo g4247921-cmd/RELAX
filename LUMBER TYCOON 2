@@ -635,17 +635,47 @@ end
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
 local Interface = Library.new("✨ RLX HUB | Lumber Tycoon 2", 5013109572)
 
---[[ Customization Professional Theme ]]--
-pcall(function()
-    for _, v in next, CoreGui:GetChildren() do
-        if v:FindFirstChild("Main") then
-            local main = v.Main
-            main.BackgroundColor3 = Color3.fromRGB(18, 18, 24) -- Deep Charcoal
-            if main:FindFirstChild("TopBar") then
-                main.TopBar.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+--[[ Customization Professional Theme & Background Image ]]--
+task.spawn(function()
+    task.wait(0.4)
+    pcall(function()
+        for _, v in next, CoreGui:GetChildren() do
+            if v:FindFirstChild("Main") then
+                local main = v.Main
+                
+                -- Auto-scale posisi dan ukuran pas di tengah layar (Mobile & PC Friendly)
+                main.AnchorPoint = Vector2.new(0.5, 0.5)
+                main.Position = UDim2.new(0.5, 0, 0.5, 0)
+                main.Size = UDim2.new(0, 520, 0, 380)
+                
+                main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+                
+                if main:FindFirstChild("TopBar") then
+                    main.TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                end
+
+                -- Pasang Background Image sesuai ID Kustom User
+                if not main:FindFirstChild("RLX_CustomBg") then
+                    local bg = Instance.new("ImageLabel")
+                    bg.Name = "RLX_CustomBg"
+                    bg.Size = UDim2.new(1, 0, 1, 0)
+                    bg.Position = UDim2.new(0, 0, 0, 0)
+                    bg.Image = "rbxassetid://85831507673195"
+                    bg.ScaleType = Enum.ScaleType.Slice
+                    bg.ImageTransparency = 0.25 -- Transparansi pas agar elemen UI tetap terbaca jelas
+                    bg.ZIndex = 0
+                    bg.Parent = main
+
+                    local overlay = Instance.new("Frame")
+                    overlay.Size = UDim2.new(1, 0, 1, 0)
+                    overlay.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+                    overlay.BackgroundTransparency = 0.4
+                    overlay.ZIndex = 0
+                    overlay.Parent = bg
+                end
             end
         end
-    end
+    end)
 end)
 
 --[[ Player Tab ]]--
@@ -656,19 +686,24 @@ local Section1 = Tab:addSection("Humanoid Mastery")
 local Walkspeed = 16
 local isUpdatingWalkspeed = false
 
+-- Slider diperhalus dengan nilai integer stabil agar tidak mental/bug balik sendiri
 Section1:addSlider("Walkspeed", 16, 16, 300, function(Value)
-    Walkspeed = math.floor(Value)
-    if not isUpdatingWalkspeed and Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        isUpdatingWalkspeed = true
-        Player.Character.Humanoid.WalkSpeed = Walkspeed
-        task.wait(0.05)
-        isUpdatingWalkspeed = false
+    local v = math.floor(Value)
+    if Walkspeed ~= v then
+        Walkspeed = v
+        if not isUpdatingWalkspeed and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            isUpdatingWalkspeed = true
+            Player.Character.Humanoid.WalkSpeed = Walkspeed
+            task.wait(0.05)
+            isUpdatingWalkspeed = false
+        end
     end
 end)
 
 Section1:addSlider("JumpPower", 50, 50, 300, function(Value)
+    local v = math.floor(Value)
     if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        Player.Character.Humanoid.JumpPower = math.floor(Value)
+        Player.Character.Humanoid.JumpPower = v
     end
 end)
 
@@ -871,7 +906,7 @@ task.spawn(function()
         toggleBtn.Name = "ToggleIcon"
         toggleBtn.Size = UDim2.new(0, 48, 0, 48)
         toggleBtn.Position = UDim2.new(0, 15, 0.5, -24) -- Pas di tengah sebelah kiri layar
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 35)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
         toggleBtn.BorderColor3 = Color3.fromRGB(80, 160, 255)
         toggleBtn.BorderSizePixel = 2
         toggleBtn.Text = "RLX"
@@ -907,11 +942,10 @@ task.spawn(function()
             if mainFrame then
                 mainFrame.Visible = isOpen
             else
-                -- Fallback jika struktur utama Venyx berubah
                 Interface:toggle()
             end
         end)
     end)
 end)
 
-print("✨ RLX HUB (Professional Edition with Floating Icon) Loaded Successfully!")
+print("✨ RLX HUB (Ultimate Edition with Custom BG & Fixed Sliders) Loaded Successfully!")
