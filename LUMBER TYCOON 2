@@ -635,9 +635,9 @@ end
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
 local Interface = Library.new("✨ RLX HUB | Lumber Tycoon 2", 5013109572)
 
---[[ Customization Professional Theme & Background Image ]]--
+--[[ Customization Professional Theme & Background Image & Perfect Center Alignment ]]--
 task.spawn(function()
-    task.wait(0.4)
+    task.wait(0.5)
     pcall(function()
         for _, v in next, CoreGui:GetChildren() do
             if v:FindFirstChild("Main") then
@@ -662,7 +662,7 @@ task.spawn(function()
                     bg.Position = UDim2.new(0, 0, 0, 0)
                     bg.Image = "rbxassetid://85831507673195"
                     bg.ScaleType = Enum.ScaleType.Slice
-                    bg.ImageTransparency = 0.25 -- Transparansi pas agar elemen UI tetap terbaca jelas
+                    bg.ImageTransparency = 0.25
                     bg.ZIndex = 0
                     bg.Parent = main
 
@@ -684,18 +684,13 @@ local Tab = Interface:addPage("Player", "6022668898")
 local Section1 = Tab:addSection("Humanoid Mastery")
 
 local Walkspeed = 16
-local isUpdatingWalkspeed = false
 
--- Slider diperhalus dengan nilai integer stabil agar tidak mental/bug balik sendiri
 Section1:addSlider("Walkspeed", 16, 16, 300, function(Value)
     local v = math.floor(Value)
     if Walkspeed ~= v then
         Walkspeed = v
-        if not isUpdatingWalkspeed and Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            isUpdatingWalkspeed = true
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
             Player.Character.Humanoid.WalkSpeed = Walkspeed
-            task.wait(0.05)
-            isUpdatingWalkspeed = false
         end
     end
 end)
@@ -746,25 +741,25 @@ Section2Tools:addButton("Safe Suicide", SafeSuicide)
 
 local Section3 = Tab:addSection("Navigation Hub")
 local Locations = {
-    ["Spawn"]           = CFrame.new(172.4, 3, 45),
-    ["WoodRUs"]         = CFrame.new(250.868, 3, 57.6917),
-    ["Land Store"]      = CFrame.new(245.581, 3, -98.8197),
-    ["Bridge"]          = CFrame.new(112.674, 3.2, -1157.35),
-    ["Furniture Store"] = CFrame.new(491.748, 3, -1702.85),
-    ["Boxed Cars"]      = CFrame.new(509.927, 3, -1475.66),
-    ["Bob's Shack"]     = CFrame.new(251.699, 8.40084, -2540.02),
-    ["Swamp"]           = CFrame.new(-888.619, 125.601, -1427.07),
-    ["Memorial"]        = CFrame.new(-1127.25, 1.10022, -944.256),
-    ["Volcano"]         = CFrame.new(-1594.45, 623, 1139.29),
-    ["Snow Biome"]      = CFrame.new(889.286, 59.7999, 1200.22),
-    ["Tiaga Peak"]      = CFrame.new(1652.22, 398.839, 3264.55),
-    ["Links Logic"]     = CFrame.new(4608.96, 7.00082, -770.485),
-    ["Fine Art's"]      = CFrame.new(5211.49, -166, 719.362),
-    ["Cave"]            = CFrame.new(3639.35, -166.2, 419.622),
-    ["Palm Island"]     = CFrame.new(2610.64, -5.89999, -14.1522),
-    ["Volcano Win"]     = CFrame.new(-1678.37, 349.602, 1477.31),
-    ["Lone Cave"]       = CFrame.new(114.942, -213.1, -1014.19),
-    ["Strange Man"]     = CFrame.new(1063.41, 18.27, 1132.52),
+    ["Spawn"]             = CFrame.new(172.4, 3, 45),
+    ["WoodRUs"]           = CFrame.new(250.868, 3, 57.6917),
+    ["Land Store"]        = CFrame.new(245.581, 3, -98.8197),
+    ["Bridge"]            = CFrame.new(112.674, 3.2, -1157.35),
+    ["Furniture Store"]   = CFrame.new(491.748, 3, -1702.85),
+    ["Boxed Cars"]        = CFrame.new(509.927, 3, -1475.66),
+    ["Bob's Shack"]       = CFrame.new(251.699, 8.40084, -2540.02),
+    ["Swamp"]             = CFrame.new(-888.619, 125.601, -1427.07),
+    ["Memorial"]          = CFrame.new(-1127.25, 1.10022, -944.256),
+    ["Volcano"]           = CFrame.new(-1594.45, 623, 1139.29),
+    ["Snow Biome"]        = CFrame.new(889.286, 59.7999, 1200.22),
+    ["Tiaga Peak"]        = CFrame.new(1652.22, 398.839, 3264.55),
+    ["Links Logic"]       = CFrame.new(4608.96, 7.00082, -770.485),
+    ["Fine Art's"]        = CFrame.new(5211.49, -166, 719.362),
+    ["Cave"]              = CFrame.new(3639.35, -166.2, 419.622),
+    ["Palm Island"]       = CFrame.new(2610.64, -5.89999, -14.1522),
+    ["Volcano Win"]       = CFrame.new(-1678.37, 349.602, 1477.31),
+    ["Lone Cave"]         = CFrame.new(114.942, -213.1, -1014.19),
+    ["Strange Man"]       = CFrame.new(1063.41, 18.27, 1132.52),
 }
 
 Section3:addDropdown("Waypoints", {"Spawn", "WoodRUs", "Land Store", "Bridge", "Furniture Store", "Boxed Cars", "Bob's Shack", "Swamp", "Memorial", "Volcano", "Snow Biome", "Tiaga Peak", "Links Logic", "Fine Art's", "Cave", "Palm Island", "Volcano Win", "Lone Cave", "Strange Man"}, function(Selected)
@@ -905,7 +900,7 @@ task.spawn(function()
         local toggleBtn = Instance.new("TextButton")
         toggleBtn.Name = "ToggleIcon"
         toggleBtn.Size = UDim2.new(0, 48, 0, 48)
-        toggleBtn.Position = UDim2.new(0, 15, 0.5, -24) -- Pas di tengah sebelah kiri layar
+        toggleBtn.Position = UDim2.new(0, 15, 0.5, -24)
         toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
         toggleBtn.BorderColor3 = Color3.fromRGB(80, 160, 255)
         toggleBtn.BorderSizePixel = 2
@@ -914,7 +909,7 @@ task.spawn(function()
         toggleBtn.TextSize = 14
         toggleBtn.Font = Enum.Font.GothamBold
         toggleBtn.Active = true
-        toggleBtn.Draggable = true -- Bisa digeser oleh user
+        toggleBtn.Draggable = true
         toggleBtn.Parent = screenGui
 
         local corner = Instance.new("UICorner")
