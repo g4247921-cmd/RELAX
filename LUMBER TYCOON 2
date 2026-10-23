@@ -190,7 +190,7 @@ local HardDragger = function()
         if Object.Name == "Dragger" then
             local BG, BP = Object:WaitForChild("BodyGyro", 2), Object:WaitForChild("BodyPosition", 2)
             if BG and BP then
-                Object.BrickColor = BrickColor.new("Hot pink")
+                Object.BrickColor = BrickColor.new("Deep blue")
                 repeat
                     BP.P = 10000 * 8
                     BP.D = 1000
@@ -630,12 +630,12 @@ local SellTrees = function()
     Teleport(CurrentPosition)
 end
 
---[[ UI Initialization (Professional Dark Theme) ]]--
+--[[ UI Initialization (Ocean Theme & Stable Layout) ]]--
 
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
-local Interface = Library.new("✨ RLX HUB | Lumber Tycoon 2", 5013109572)
+local Interface = Library.new("🌊 RLX OCEAN HUB | Lumber Tycoon 2", 5013109572)
 
---[[ Customization Professional Theme & Background Image & Perfect Center Alignment ]]--
+--[[ Customization Ocean Theme, Background & Responsive Centering ]]--
 task.spawn(function()
     task.wait(0.5)
     pcall(function()
@@ -648,13 +648,14 @@ task.spawn(function()
                 main.Position = UDim2.new(0.5, 0, 0.5, 0)
                 main.Size = UDim2.new(0, 520, 0, 380)
                 
-                main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+                -- Nuansa Ocean Gelap Elegan (Deep Navy & Ocean Blue Accent)
+                main.BackgroundColor3 = Color3.fromRGB(11, 19, 30)
                 
                 if main:FindFirstChild("TopBar") then
-                    main.TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    main.TopBar.BackgroundColor3 = Color3.fromRGB(16, 28, 45)
                 end
 
-                -- Pasang Background Image sesuai ID Kustom User
+                -- Pasang Background Ocean Aesthetic & Overlay
                 if not main:FindFirstChild("RLX_CustomBg") then
                     local bg = Instance.new("ImageLabel")
                     bg.Name = "RLX_CustomBg"
@@ -668,8 +669,8 @@ task.spawn(function()
 
                     local overlay = Instance.new("Frame")
                     overlay.Size = UDim2.new(1, 0, 1, 0)
-                    overlay.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-                    overlay.BackgroundTransparency = 0.4
+                    overlay.BackgroundColor3 = Color3.fromRGB(8, 14, 24)
+                    overlay.BackgroundTransparency = 0.35
                     overlay.ZIndex = 0
                     overlay.Parent = bg
                 end
@@ -684,26 +685,32 @@ local Tab = Interface:addPage("Player", "6022668898")
 local Section1 = Tab:addSection("Humanoid Mastery")
 
 local Walkspeed = 16
+local lastWalkSpeedUpdate = 0
 
+-- Slider dikunci dengan debounce & clamp agar tidak bug/mental/terlalu cepat
 Section1:addSlider("Walkspeed", 16, 16, 300, function(Value)
-    local v = math.floor(Value)
+    local v = math.clamp(math.floor(Value), 16, 300)
     if Walkspeed ~= v then
         Walkspeed = v
-        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.WalkSpeed = Walkspeed
+        local now = tick()
+        if now - lastWalkSpeedUpdate >= 0.05 then
+            lastWalkSpeedUpdate = now
+            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                Player.Character.Humanoid.WalkSpeed = Walkspeed
+            end
         end
     end
 end)
 
 Section1:addSlider("JumpPower", 50, 50, 300, function(Value)
-    local v = math.floor(Value)
+    local v = math.clamp(math.floor(Value), 50, 300)
     if Player.Character and Player.Character:FindFirstChild("Humanoid") then
         Player.Character.Humanoid.JumpPower = v
     end
 end)
 
 Section1:addSlider("Fly Speed", 50, 50, 500, function(Value)
-    FlyingSpeed = math.floor(Value)
+    FlyingSpeed = math.clamp(math.floor(Value), 50, 500)
 end)
 
 local IsFlyingToggle = false
@@ -797,7 +804,7 @@ SecGame:addButton("Get Green Box", GetGreenBox)
 
 local SecVehicle = Tab2:addSection("Vehicle Control")
 SecVehicle:addSlider("Vehicle Speed", 1, 1, 6, function(Value)
-    VehicleSpeed(math.floor(Value))
+    VehicleSpeed(math.clamp(math.floor(Value), 1, 6))
 end)
 SecVehicle:addButton("Flip Vehicle", FlipVehicle)
 
@@ -807,7 +814,7 @@ local Tab3 = Interface:addPage("Property", "6022668898")
 local SecSlot = Tab3:addSection("Save & Load Slots")
 
 local SlotNumber = 1
-SecSlot:addSlider("Slot Selection", 1, 1, 6, function(Value) SlotNumber = math.floor(Value) end)
+SecSlot:addSlider("Slot Selection", 1, 1, 6, function(Value) SlotNumber = math.clamp(math.floor(Value), 1, 6) end)
 SecSlot:addButton("Load Slot", function()
     LoadSlot(SlotNumber)
 end)
@@ -828,7 +835,7 @@ local Tab4 = Interface:addPage("Shop", "6022668898")
 local SecBuy = Tab4:addSection("Auto Purchase")
 
 local AutoBuyAmount = 1
-SecBuy:addSlider("Purchase Quantity", 1, 1, 100, function(Value) AutoBuyAmount = math.floor(Value) end)
+SecBuy:addSlider("Purchase Quantity", 1, 1, 100, function(Value) AutoBuyAmount = math.clamp(math.floor(Value), 1, 100) end)
 
 local AutoBuyItem = "Basic Hatchet"
 local successList, dynamicList = pcall(autoBuyList)
@@ -850,7 +857,7 @@ local SectionWood1 = Tab5:addSection("Automated Logging")
 
 local TreeAmount = 1
 SectionWood1:addSlider("Tree Amount", 1, 1, 30, function(Value)
-    TreeAmount = math.floor(Value)
+    TreeAmount = math.clamp(math.floor(Value), 1, 30)
 end)
 
 local SelectedTree = "Generic"
@@ -887,12 +894,12 @@ end)
 -- Pilih halaman pertama saat pertama kali dibuka
 Interface:SelectPage(Interface.pages[1], true)
 
---[[ Independent Floating Custom Icon (Pasti Muncul, Elegan, dan Draggable di Kiri Tengah) ]]--
+--[[ Independent Floating Custom Ocean Icon (Draggable & Elegant Blue Glow) ]]--
 task.spawn(function()
     task.wait(0.5)
     pcall(function()
         local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "RLX_FloatingToggleGui"
+        screenGui.Name = "RLX_OceanFloatingToggleGui"
         screenGui.ResetOnSpawn = false
         screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         screenGui.Parent = CoreGui
@@ -901,11 +908,11 @@ task.spawn(function()
         toggleBtn.Name = "ToggleIcon"
         toggleBtn.Size = UDim2.new(0, 48, 0, 48)
         toggleBtn.Position = UDim2.new(0, 15, 0.5, -24)
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-        toggleBtn.BorderColor3 = Color3.fromRGB(80, 160, 255)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(13, 27, 42)
+        toggleBtn.BorderColor3 = Color3.fromRGB(0, 162, 232)
         toggleBtn.BorderSizePixel = 2
         toggleBtn.Text = "RLX"
-        toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        toggleBtn.TextColor3 = Color3.fromRGB(120, 220, 255)
         toggleBtn.TextSize = 14
         toggleBtn.Font = Enum.Font.GothamBold
         toggleBtn.Active = true
@@ -917,8 +924,8 @@ task.spawn(function()
         corner.Parent = toggleBtn
 
         local shadow = Instance.new("UIStroke")
-        shadow.Color = Color3.fromRGB(50, 130, 255)
-        shadow.Transparency = 0.4
+        shadow.Color = Color3.fromRGB(0, 162, 232)
+        shadow.Transparency = 0.3
         shadow.Thickness = 2
         shadow.Parent = toggleBtn
 
@@ -943,4 +950,4 @@ task.spawn(function()
     end)
 end)
 
-print("✨ RLX HUB (Ultimate Edition with Custom BG & Fixed Sliders) Loaded Successfully!")
+print("🌊 RLX OCEAN HUB (Enhanced Stability & Ocean Theme) Loaded Successfully!")
