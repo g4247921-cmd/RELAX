@@ -64,23 +64,68 @@ local GetPlayerList = function()
     return Plrs
 end
 
---[[ Client Features ]]--
+--[[ Client Features State ]]--
+
+local Walkspeed = 16
+local JumpPower = 50
+local isCustomSpeedActive = false
+local isCustomJumpActive = false
+
+local ApplyHumanoidStats = function()
+    pcall(function()
+        if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+            local hum = Player.Character:FindFirstChildOfClass("Humanoid")
+            if isCustomSpeedActive then
+                hum.WalkSpeed = Walkspeed
+            end
+            if isCustomJumpActive then
+                hum.UseJumpPower = true
+                hum.JumpPower = JumpPower
+            end
+        end
+    end)
+end
+
+-- Terapkan ulang saat karakter respawn / ganti tempat
+Player.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 5)
+    task.wait(0.2)
+    ApplyHumanoidStats()
+end)
+
+-- Loop halus untuk mengunci kecepatan agar tidak di-reset oleh sistem bawaan game
+RunService.RenderStepped:Connect(function()
+    if isCustomSpeedActive and Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        local hum = Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum.WalkSpeed ~= Walkspeed then
+            hum.WalkSpeed = Walkspeed
+        end
+    end
+    if isCustomJumpActive and Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        local hum = Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum.JumpPower ~= JumpPower then
+            hum.UseJumpPower = true
+            hum.JumpPower = JumpPower
+        end
+    end
+end)
 
 local isFlying = false
 local FlyingSpeed = 50
 local PlayerFly = function(Value)
-    repeat task.wait() until Player and Player.Character and Player.Character:FindFirstChild('Head') and Player.Character:FindFirstChild('Humanoid')
+    repeat task.wait() until Player and Player.Character and Player.Character:FindFirstChild('Head') and Player.Character:FindFirstChildOfClass('Humanoid')
     local Steer = {f = 0, b = 0, l = 0, r = 0}
     local BackSteer = {f = 0, b = 0, l = 0, r = 0}
     local MaxSpeed = 500
+    local Humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
     
-    if not Player.Character.Humanoid.SeatPart then
-        Player.Character.Humanoid.PlatformStand = true
+    if not Humanoid.SeatPart then
+        Humanoid.PlatformStand = true
     end
 
     local CarFly = nil
-    if Player.Character.Humanoid.SeatPart then
-        CarFly = Player.Character.Humanoid.SeatPart
+    if Humanoid.SeatPart then
+        CarFly = Humanoid.SeatPart
         local FlyWeldone = Instance.new("Weld", Player.Character.HumanoidRootPart)
         local FlyWeldtwo = Instance.new("Weld", CarFly)
         FlyWeldone.Part0 = Player.Character.HumanoidRootPart
@@ -139,8 +184,8 @@ local PlayerFly = function(Value)
                 RootPart.CFrame = CFrame.new(CarFly.CFrame.p)
             end
         end)
-        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.PlatformStand = false
+        if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+            Player.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
         end
     end
 
@@ -162,8 +207,8 @@ local PlayerFly = function(Value)
 
     if not Value then
         isFlying = false
-        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.PlatformStand = false
+        if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+            Player.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
         end
     else
         isFlying = true
@@ -284,7 +329,7 @@ end
 
 local FlipVehicle = function()
     pcall(function()
-        Player.Character.Humanoid.SeatPart.Parent:PivotTo(CFrame.new(Player.Character.HumanoidRootPart.CFrame.p) + Vector3.new(0, 5, 0))
+        Player.Character:FindFirstChildOfClass("Humanoid").SeatPart.Parent:PivotTo(CFrame.new(Player.Character.HumanoidRootPart.CFrame.p) + Vector3.new(0, 5, 0))
     end)
 end
 
@@ -635,18 +680,13 @@ end
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
 local Interface = Library.new("🌊 RLX OCEAN HUB | LT2", 5013109572)
 
---[[ Custom Interactive Number Box Component (Menggantikan Slider Buggy) ]]--
+--[[ Universal Dynamic Number Input Helper (Responsif & Instant) ]]--
 local addNumberInput = function(section, title, defaultVal, minVal, maxVal, callback)
-    local currentVal = defaultVal
-
-    -- Menggunakan addTextbox Venyx secara aman & stabil
-    section:addTextbox(title .. " [" .. tostring(minVal) .. "-" .. tostring(maxVal) .. "]", tostring(defaultVal), function(txt, focusLost)
-        if focusLost then
-            local num = tonumber(txt)
-            if num then
-                currentVal = math.clamp(math.floor(num), minVal, maxVal)
-                callback(currentVal)
-            end
+    section:addTextbox(title .. " (" .. minVal .. "-" .. maxVal .. ")", tostring(defaultVal), function(value, focusLost)
+        local parsed = tonumber(value)
+        if parsed then
+            local clamped = math.clamp(math.floor(parsed), minVal, maxVal)
+            callback(clamped)
         end
     end)
 end
@@ -698,33 +738,27 @@ end)
 local Tab = Interface:addPage("Player", "6022668898")
 local Section1 = Tab:addSection("Humanoid Mastery")
 
-local Walkspeed = 16
-
--- Penggunaan Custom Numeric Input (Bebas Bug Slider)
+-- Penggunaan Custom Numeric Input dengan Penguncian Variabel
 addNumberInput(Section1, "Walkspeed", 16, 16, 300, function(v)
     Walkspeed = v
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        Player.Character.Humanoid.WalkSpeed = Walkspeed
+    isCustomSpeedActive = (v > 16)
+    if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        Player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Walkspeed
     end
 end)
 
 addNumberInput(Section1, "JumpPower", 50, 50, 300, function(v)
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        Player.Character.Humanoid.JumpPower = v
+    JumpPower = v
+    isCustomJumpActive = (v > 50)
+    if Player.Character and Player.Character:FindFirstChildOfClass("Humanoid") then
+        local hum = Player.Character:FindFirstChildOfClass("Humanoid")
+        hum.UseJumpPower = true
+        hum.JumpPower = JumpPower
     end
 end)
 
 addNumberInput(Section1, "Fly Speed", 50, 50, 500, function(v)
     FlyingSpeed = v
-end)
-
--- Proteksi Walkspeed tetap aktif & konsisten
-RunService.Stepped:Connect(function()
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        if Walkspeed > 16 and Player.Character.Humanoid.WalkSpeed ~= Walkspeed then
-            Player.Character.Humanoid.WalkSpeed = Walkspeed
-        end
-    end
 end)
 
 local IsFlyingToggle = false
@@ -967,4 +1001,4 @@ task.spawn(function()
     end)
 end)
 
-print("🌊 RLX OCEAN HUB | Custom Numeric Inputs Ready & Bug-Free!")
+print("🌊 RLX OCEAN HUB | Humanoid Walkspeed & Numeric System Loaded Perfectly!")
