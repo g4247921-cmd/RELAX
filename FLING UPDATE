@@ -1,6 +1,6 @@
 -- =================================------------------
 -- DEV -- > RLX FLING ; DISCORD - tankuct.
--- UPDATED -- > v2.4: Auto-Refresh PlayerList + Fixed Attack All + Fling On Walk
+-- UPDATED -- > v2.5: Compact Auto-Scaled UI + Live PlayerList
 -- =================================------------------
 
 local Targets = {}
@@ -170,7 +170,7 @@ local function toggleAntiFling()
 	end
 end
 
--- Fling On Walk (Jalan biasa, bisa nabrak benda, aman dari fling player lain)
+-- Fling On Walk
 local function toggleFlingOnWalk()
 	flingOnWalkEnabled = not flingOnWalkEnabled
 	if flingOnWalkEnabled then
@@ -302,7 +302,7 @@ local SkidFling = function(TargetPlayer)
 end
 
 -- =================================
--- UI CREATION (Dengan PlayerList Auto-Refresh)
+-- UI CREATION (Compact & Auto-Scaled)
 -- =================================
 
 local screenGui = Instance.new("ScreenGui")
@@ -313,8 +313,8 @@ screenGui.Parent = parentGui
 -- Floating Toggle Icon Button
 local toggleBtn = Instance.new("ImageButton")
 toggleBtn.Name = "OpenCloseToggle"
-toggleBtn.Size = UDim2.new(0, 45, 0, 45)
-toggleBtn.Position = UDim2.new(0, 15, 0.5, -22)
+toggleBtn.Size = UDim2.new(0, 40, 0, 40)
+toggleBtn.Position = UDim2.new(0, 15, 0.5, -20)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(24, 26, 32)
 toggleBtn.Image = "rbxassetid://6031094678"
 toggleBtn.ImageColor3 = Color3.fromRGB(0, 200, 255)
@@ -325,20 +325,20 @@ toggleCorner.CornerRadius = UDim.new(1, 0)
 
 local toggleStroke = Instance.new("UIStroke", toggleBtn)
 toggleStroke.Color = Color3.fromRGB(45, 50, 65)
-toggleStroke.Thickness = 2
+toggleStroke.Thickness = 1.5
 
--- Main Frame (Diperlebar ke samping untuk mengakomodasi PlayerList)
+-- Main Frame (Diperkecil dan Pas)
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 520, 0, 355)
-frame.Position = UDim2.new(0.5, -260, 0.4, -177)
+frame.Size = UDim2.new(0, 440, 0, 310)
+frame.Position = UDim2.new(0.5, -220, 0.4, -155)
 frame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
 frame.BorderSizePixel = 0
 frame.ClipsDescendants = true
 frame.Parent = screenGui
 
 local mainCorner = Instance.new("UICorner", frame)
-mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.CornerRadius = UDim.new(0, 10)
 
 local mainStroke = Instance.new("UIStroke", frame)
 mainStroke.Color = Color3.fromRGB(40, 45, 60)
@@ -347,51 +347,51 @@ mainStroke.Thickness = 1.5
 -- Header
 local header = Instance.new("Frame")
 header.Name = "Header"
-header.Size = UDim2.new(1, 0, 0, 40)
+header.Size = UDim2.new(1, 0, 0, 34)
 header.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 header.BorderSizePixel = 0
 header.Parent = frame
 
 local headerCorner = Instance.new("UICorner", header)
-headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.CornerRadius = UDim.new(0, 10)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -50, 1, 0)
-title.Position = UDim2.new(0, 12, 0, 0)
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "RLX FLING <font color=\"#00C8FF\">v2.4</font>"
+title.Text = "RLX FLING <font color=\"#00C8FF\">v2.5</font>"
 title.RichText = true
 title.Font = Enum.Font.GothamBold
-title.TextSize = 14
+title.TextSize = 13
 title.TextColor3 = Color3.fromRGB(240, 240, 240)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = header
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 28, 0, 28)
-closeBtn.Position = UDim2.new(1, -34, 0, 6)
+closeBtn.Size = UDim2.new(0, 24, 0, 24)
+closeBtn.Position = UDim2.new(1, -29, 0, 5)
 closeBtn.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
 closeBtn.Text = "✕"
 closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 13
+closeBtn.TextSize = 11
 closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 closeBtn.Parent = header
 
 local closeCorner = Instance.new("UICorner", closeBtn)
-closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.CornerRadius = UDim.new(0, 5)
 
 -- Left Panel (Controls)
 local leftPanel = Instance.new("Frame")
-leftPanel.Size = UDim2.new(0, 300, 1, -50)
-leftPanel.Position = UDim2.new(0, 0, 0, 45)
+leftPanel.Size = UDim2.new(0, 255, 1, -40)
+leftPanel.Position = UDim2.new(0, 0, 0, 38)
 leftPanel.BackgroundTransparency = 1
 leftPanel.Parent = frame
 
 -- Search Box
 local searchBox = Instance.new("TextBox")
 searchBox.Name = "SearchBox"
-searchBox.Size = UDim2.new(1, -24, 0, 36)
-searchBox.Position = UDim2.new(0, 12, 0, 5)
+searchBox.Size = UDim2.new(1, -16, 0, 30)
+searchBox.Position = UDim2.new(0, 8, 0, 2)
 searchBox.Text = ""
 searchBox.PlaceholderText = "Type Username or DisplayName..."
 searchBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 140)
@@ -399,15 +399,15 @@ searchBox.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 searchBox.ClearTextOnFocus = false
 searchBox.Font = Enum.Font.GothamMedium
-searchBox.TextSize = 13
+searchBox.TextSize = 11
 searchBox.TextXAlignment = Enum.TextXAlignment.Left
 searchBox.Parent = leftPanel
 
 local searchPadding = Instance.new("UIPadding", searchBox)
-searchPadding.PaddingLeft = UDim.new(0, 10)
+searchPadding.PaddingLeft = UDim.new(0, 8)
 
 local searchCorner = Instance.new("UICorner", searchBox)
-searchCorner.CornerRadius = UDim.new(0, 8)
+searchCorner.CornerRadius = UDim.new(0, 6)
 
 local searchStroke = Instance.new("UIStroke", searchBox)
 searchStroke.Color = Color3.fromRGB(40, 45, 60)
@@ -415,17 +415,17 @@ searchStroke.Color = Color3.fromRGB(40, 45, 60)
 -- Avatar Card
 local avaCard = Instance.new("Frame")
 avaCard.Name = "AvatarCard"
-avaCard.Size = UDim2.new(1, -24, 0, 55)
-avaCard.Position = UDim2.new(0, 12, 0, 49)
+avaCard.Size = UDim2.new(1, -16, 0, 46)
+avaCard.Position = UDim2.new(0, 8, 0, 38)
 avaCard.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
 avaCard.Parent = leftPanel
 
 local cardCorner = Instance.new("UICorner", avaCard)
-cardCorner.CornerRadius = UDim.new(0, 8)
+cardCorner.CornerRadius = UDim.new(0, 6)
 
 local avaImg = Instance.new("ImageLabel")
-avaImg.Size = UDim2.new(0, 41, 0, 41)
-avaImg.Position = UDim2.new(0, 7, 0, 7)
+avaImg.Size = UDim2.new(0, 34, 0, 34)
+avaImg.Position = UDim2.new(0, 6, 0, 6)
 avaImg.BackgroundColor3 = Color3.fromRGB(15, 17, 22)
 avaImg.Image = "rbxassetid://0"
 avaImg.Parent = avaCard
@@ -434,23 +434,23 @@ local avaCorner = Instance.new("UICorner", avaImg)
 avaCorner.CornerRadius = UDim.new(1, 0)
 
 local dispNameLbl = Instance.new("TextLabel")
-dispNameLbl.Size = UDim2.new(1, -60, 0, 18)
-dispNameLbl.Position = UDim2.new(0, 55, 0, 8)
+dispNameLbl.Size = UDim2.new(1, -50, 0, 16)
+dispNameLbl.Position = UDim2.new(0, 46, 0, 6)
 dispNameLbl.BackgroundTransparency = 1
 dispNameLbl.Text = "No Target Selected"
 dispNameLbl.Font = Enum.Font.GothamBold
-dispNameLbl.TextSize = 13
+dispNameLbl.TextSize = 11
 dispNameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
 dispNameLbl.TextXAlignment = Enum.TextXAlignment.Left
 dispNameLbl.Parent = avaCard
 
 local userNameLbl = Instance.new("TextLabel")
-userNameLbl.Size = UDim2.new(1, -60, 0, 16)
-userNameLbl.Position = UDim2.new(0, 55, 0, 26)
+userNameLbl.Size = UDim2.new(1, -50, 0, 14)
+userNameLbl.Position = UDim2.new(0, 46, 0, 22)
 userNameLbl.BackgroundTransparency = 1
 userNameLbl.Text = "@none"
 userNameLbl.Font = Enum.Font.Gotham
-userNameLbl.TextSize = 11
+userNameLbl.TextSize = 10
 userNameLbl.TextColor3 = Color3.fromRGB(130, 135, 150)
 userNameLbl.TextXAlignment = Enum.TextXAlignment.Left
 userNameLbl.Parent = avaCard
@@ -462,13 +462,13 @@ local function createButton(text, pos, size, parent)
 	btn.Position = pos
 	btn.Text = text
 	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 11
+	btn.TextSize = 10
 	btn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
 	btn.TextColor3 = Color3.fromRGB(220, 225, 240)
 	btn.Parent = parent
 	
 	local corner = Instance.new("UICorner", btn)
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0, 6)
 	
 	local stroke = Instance.new("UIStroke", btn)
 	stroke.Color = Color3.fromRGB(45, 50, 68)
@@ -477,96 +477,93 @@ local function createButton(text, pos, size, parent)
 end
 
 -- Layout Tombol Kontrol
-local attackBtn = createButton("ATTACK", UDim2.new(0, 12, 0, 113), UDim2.new(0.48, -6, 0, 34), leftPanel)
+local attackBtn = createButton("ATTACK", UDim2.new(0, 8, 0, 90), UDim2.new(0.48, -4, 0, 30), leftPanel)
 attackBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50)
 attackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local spectateBtn = createButton("SPECTATE", UDim2.new(0.52, 0, 0, 113), UDim2.new(0.48, -6, 0, 34), leftPanel)
+local spectateBtn = createButton("SPECTATE", UDim2.new(0.52, 0, 0, 90), UDim2.new(0.48, -4, 0, 30), leftPanel)
 spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
 spectateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local allBtn = createButton("Attack All: OFF", UDim2.new(0, 12, 0, 153), UDim2.new(1, -24, 0, 32), leftPanel)
-local noclipBtn = createButton("Noclip: OFF", UDim2.new(0, 12, 0, 191), UDim2.new(0.48, -6, 0, 32), leftPanel)
-local antiFlingBtn = createButton("Anti-Fling: OFF", UDim2.new(0.52, 0, 0, 191), UDim2.new(0.48, -6, 0, 32), leftPanel)
-local flingOnWalkBtn = createButton("Fling On Walk: OFF", UDim2.new(0, 12, 0, 229), UDim2.new(1, -24, 0, 32), leftPanel)
+local allBtn = createButton("Attack All: OFF", UDim2.new(0, 8, 0, 126), UDim2.new(1, -16, 0, 28), leftPanel)
+local noclipBtn = createButton("Noclip: OFF", UDim2.new(0, 8, 0, 160), UDim2.new(0.48, -4, 0, 28), leftPanel)
+local antiFlingBtn = createButton("Anti-Fling: OFF", UDim2.new(0.52, 0, 0, 160), UDim2.new(0.48, -4, 0, 28), leftPanel)
+local flingOnWalkBtn = createButton("Fling On Walk: OFF", UDim2.new(0, 8, 0, 194), UDim2.new(1, -16, 0, 28), leftPanel)
 
 local footer = Instance.new("TextLabel")
-footer.Size = UDim2.new(1, 0, 0, 18)
-footer.Position = UDim2.new(0, 0, 1, -20)
+footer.Size = UDim2.new(1, 0, 0, 14)
+footer.Position = UDim2.new(0, 0, 1, -18)
 footer.BackgroundTransparency = 1
 footer.Text = "DEV: RLX FLING | DC: Anjaszrelaxz"
 footer.Font = Enum.Font.GothamMedium
-footer.TextSize = 10
+footer.TextSize = 9
 footer.TextColor3 = Color3.fromRGB(80, 85, 100)
 footer.Parent = leftPanel
 
 -- =================================
--- RIGHT PANEL: LIVE PLAYER LIST (Auto-Refresh)
+-- RIGHT PANEL: LIVE PLAYER LIST (Compact)
 -- =================================
 
 local rightPanel = Instance.new("Frame")
-rightPanel.Size = UDim2.new(0, 205, 1, -55)
-rightPanel.Position = UDim2.new(0, 305, 0, 45)
+rightPanel.Size = UDim2.new(0, 170, 1, -44)
+rightPanel.Position = UDim2.new(0, 262, 0, 38)
 rightPanel.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 rightPanel.Parent = frame
 
 local rightCorner = Instance.new("UICorner", rightPanel)
-rightCorner.CornerRadius = UDim.new(0, 8)
+rightCorner.CornerRadius = UDim.new(0, 6)
 
 local rightStroke = Instance.new("UIStroke", rightPanel)
 rightStroke.Color = Color3.fromRGB(38, 43, 58)
 
 local listTitle = Instance.new("TextLabel")
-listTitle.Size = UDim2.new(1, 0, 0, 28)
+listTitle.Size = UDim2.new(1, 0, 0, 24)
 listTitle.Position = UDim2.new(0, 0, 0, 2)
 listTitle.BackgroundTransparency = 1
 listTitle.Text = "ONLINE PLAYERS"
 listTitle.Font = Enum.Font.GothamBold
-listTitle.TextSize = 11
+listTitle.TextSize = 10
 listTitle.TextColor3 = Color3.fromRGB(150, 160, 180)
 listTitle.Parent = rightPanel
 
 local scrollingFrame = Instance.new("ScrollingFrame")
-scrollingFrame.Size = UDim2.new(1, -8, 1, -35)
-scrollingFrame.Position = UDim2.new(0, 4, 0, 32)
+scrollingFrame.Size = UDim2.new(1, -6, 1, -30)
+scrollingFrame.Position = UDim2.new(0, 3, 0, 26)
 scrollingFrame.BackgroundTransparency = 1
 scrollingFrame.BorderSizePixel = 0
 scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scrollingFrame.ScrollBarThickness = 4
+scrollingFrame.ScrollBarThickness = 3
 scrollingFrame.Parent = rightPanel
 
 local uiListLayout = Instance.new("UIListLayout")
 uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-uiListLayout.Padding = UDim.new(0, 4)
+uiListLayout.Padding = UDim.new(0, 3)
 uiListLayout.Parent = scrollingFrame
 
--- Fungsi untuk memperbarui PlayerList secara otomatis & rapi
+-- Refresh PlayerList secara otomatis
 local function refreshPlayerList()
-	-- Bersihkan list lama
 	for _, child in ipairs(scrollingFrame:GetChildren()) do
 		if child:IsA("TextButton") then
 			child:Destroy()
 		end
 	end
 
-	-- Buat tombol untuk setiap player
 	for _, pl in ipairs(Players:GetPlayers()) do
 		if pl ~= Player then
 			local pBtn = Instance.new("TextButton")
-			pBtn.Size = UDim2.new(1, 0, 0, 28)
+			pBtn.Size = UDim2.new(1, 0, 0, 24)
 			pBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-			pBtn.Text = "  " .. pl.DisplayName .. " (@" .. pl.Name .. ")"
+			pBtn.Text = "  " .. pl.DisplayName
 			pBtn.Font = Enum.Font.GothamMedium
-			pBtn.TextSize = 11
+			pBtn.TextSize = 10
 			pBtn.TextColor3 = Color3.fromRGB(220, 225, 240)
 			pBtn.TextXAlignment = Enum.TextXAlignment.Left
 			pBtn.Parent = scrollingFrame
 
 			local btnCorner = Instance.new("UICorner", pBtn)
-			btnCorner.CornerRadius = UDim.new(0, 6)
+			btnCorner.CornerRadius = UDim.new(0, 5)
 
-			-- Klik player di list untuk otomatis memilihnya sebagai target
 			pBtn.MouseButton1Click:Connect(function()
 				searchBox.Text = pl.Name
 			end)
@@ -574,11 +571,8 @@ local function refreshPlayerList()
 	end
 end
 
--- Sambungkan event auto-refresh saat player masuk atau keluar server
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
-
--- Panggil pertama kali saat UI dimuat
 refreshPlayerList()
 
 -- =================================
@@ -624,7 +618,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 	end
 end)
 
--- Auto Search & Realtime Headshot Avatar
+-- Auto Search & Avatar
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 	local text = searchBox.Text
 	if text == "" then
@@ -763,4 +757,4 @@ attackBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-Message("RLX FLING", "Loaded v2.4! Live Auto-Refresh PlayerList Added.", 5)
+Message("RLX FLING", "Loaded v2.5! Compact & Auto-Scaled UI.", 5)
