@@ -630,32 +630,46 @@ local SellTrees = function()
     Teleport(CurrentPosition)
 end
 
---[[ UI Initialization (Ocean Theme & Stable Layout) ]]--
+--[[ UI Initialization (Ocean Theme Professional) ]]--
 
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
-local Interface = Library.new("🌊 RLX OCEAN HUB | Lumber Tycoon 2", 5013109572)
+local Interface = Library.new("🌊 RLX OCEAN HUB | LT2", 5013109572)
 
---[[ Customization Ocean Theme, Background & Responsive Centering ]]--
+--[[ Custom Interactive Number Box Component (Menggantikan Slider Buggy) ]]--
+local addNumberInput = function(section, title, defaultVal, minVal, maxVal, callback)
+    local currentVal = defaultVal
+
+    -- Menggunakan addTextbox Venyx secara aman & stabil
+    section:addTextbox(title .. " [" .. tostring(minVal) .. "-" .. tostring(maxVal) .. "]", tostring(defaultVal), function(txt, focusLost)
+        if focusLost then
+            local num = tonumber(txt)
+            if num then
+                currentVal = math.clamp(math.floor(num), minVal, maxVal)
+                callback(currentVal)
+            end
+        end
+    end)
+end
+
+--[[ Customization Ocean Theme, Background & Centering ]]--
 task.spawn(function()
-    task.wait(0.5)
+    task.wait(0.4)
     pcall(function()
         for _, v in next, CoreGui:GetChildren() do
             if v:FindFirstChild("Main") then
                 local main = v.Main
                 
-                -- Auto-scale posisi dan ukuran pas di tengah layar (Mobile & PC Friendly)
+                -- Auto-scale posisi dan ukuran pas di tengah layar
                 main.AnchorPoint = Vector2.new(0.5, 0.5)
                 main.Position = UDim2.new(0.5, 0, 0.5, 0)
                 main.Size = UDim2.new(0, 520, 0, 380)
                 
-                -- Nuansa Ocean Gelap Elegan (Deep Navy & Ocean Blue Accent)
-                main.BackgroundColor3 = Color3.fromRGB(11, 19, 30)
+                main.BackgroundColor3 = Color3.fromRGB(10, 18, 30)
                 
                 if main:FindFirstChild("TopBar") then
-                    main.TopBar.BackgroundColor3 = Color3.fromRGB(16, 28, 45)
+                    main.TopBar.BackgroundColor3 = Color3.fromRGB(15, 28, 48)
                 end
 
-                -- Pasang Background Ocean Aesthetic & Overlay
                 if not main:FindFirstChild("RLX_CustomBg") then
                     local bg = Instance.new("ImageLabel")
                     bg.Name = "RLX_CustomBg"
@@ -669,7 +683,7 @@ task.spawn(function()
 
                     local overlay = Instance.new("Frame")
                     overlay.Size = UDim2.new(1, 0, 1, 0)
-                    overlay.BackgroundColor3 = Color3.fromRGB(8, 14, 24)
+                    overlay.BackgroundColor3 = Color3.fromRGB(6, 12, 22)
                     overlay.BackgroundTransparency = 0.35
                     overlay.ZIndex = 0
                     overlay.Parent = bg
@@ -685,32 +699,32 @@ local Tab = Interface:addPage("Player", "6022668898")
 local Section1 = Tab:addSection("Humanoid Mastery")
 
 local Walkspeed = 16
-local lastWalkSpeedUpdate = 0
 
--- Slider dikunci dengan debounce & clamp agar tidak bug/mental/terlalu cepat
-Section1:addSlider("Walkspeed", 16, 16, 300, function(Value)
-    local v = math.clamp(math.floor(Value), 16, 300)
-    if Walkspeed ~= v then
-        Walkspeed = v
-        local now = tick()
-        if now - lastWalkSpeedUpdate >= 0.05 then
-            lastWalkSpeedUpdate = now
-            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                Player.Character.Humanoid.WalkSpeed = Walkspeed
-            end
-        end
+-- Penggunaan Custom Numeric Input (Bebas Bug Slider)
+addNumberInput(Section1, "Walkspeed", 16, 16, 300, function(v)
+    Walkspeed = v
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = Walkspeed
     end
 end)
 
-Section1:addSlider("JumpPower", 50, 50, 300, function(Value)
-    local v = math.clamp(math.floor(Value), 50, 300)
+addNumberInput(Section1, "JumpPower", 50, 50, 300, function(v)
     if Player.Character and Player.Character:FindFirstChild("Humanoid") then
         Player.Character.Humanoid.JumpPower = v
     end
 end)
 
-Section1:addSlider("Fly Speed", 50, 50, 500, function(Value)
-    FlyingSpeed = math.clamp(math.floor(Value), 50, 500)
+addNumberInput(Section1, "Fly Speed", 50, 50, 500, function(v)
+    FlyingSpeed = v
+end)
+
+-- Proteksi Walkspeed tetap aktif & konsisten
+RunService.Stepped:Connect(function()
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        if Walkspeed > 16 and Player.Character.Humanoid.WalkSpeed ~= Walkspeed then
+            Player.Character.Humanoid.WalkSpeed = Walkspeed
+        end
+    end
 end)
 
 local IsFlyingToggle = false
@@ -803,8 +817,8 @@ SecGame:addToggle("Bridge Down", false, BridgeDown)
 SecGame:addButton("Get Green Box", GetGreenBox)
 
 local SecVehicle = Tab2:addSection("Vehicle Control")
-SecVehicle:addSlider("Vehicle Speed", 1, 1, 6, function(Value)
-    VehicleSpeed(math.clamp(math.floor(Value), 1, 6))
+addNumberInput(SecVehicle, "Vehicle Speed", 1, 1, 6, function(v)
+    VehicleSpeed(v)
 end)
 SecVehicle:addButton("Flip Vehicle", FlipVehicle)
 
@@ -814,7 +828,10 @@ local Tab3 = Interface:addPage("Property", "6022668898")
 local SecSlot = Tab3:addSection("Save & Load Slots")
 
 local SlotNumber = 1
-SecSlot:addSlider("Slot Selection", 1, 1, 6, function(Value) SlotNumber = math.clamp(math.floor(Value), 1, 6) end)
+addNumberInput(SecSlot, "Slot Selection", 1, 1, 6, function(v)
+    SlotNumber = v
+end)
+
 SecSlot:addButton("Load Slot", function()
     LoadSlot(SlotNumber)
 end)
@@ -835,7 +852,9 @@ local Tab4 = Interface:addPage("Shop", "6022668898")
 local SecBuy = Tab4:addSection("Auto Purchase")
 
 local AutoBuyAmount = 1
-SecBuy:addSlider("Purchase Quantity", 1, 1, 100, function(Value) AutoBuyAmount = math.clamp(math.floor(Value), 1, 100) end)
+addNumberInput(SecBuy, "Purchase Quantity", 1, 1, 100, function(v)
+    AutoBuyAmount = v
+end)
 
 local AutoBuyItem = "Basic Hatchet"
 local successList, dynamicList = pcall(autoBuyList)
@@ -856,8 +875,8 @@ local Tab5 = Interface:addPage("Logging", "6022668898")
 local SectionWood1 = Tab5:addSection("Automated Logging")
 
 local TreeAmount = 1
-SectionWood1:addSlider("Tree Amount", 1, 1, 30, function(Value)
-    TreeAmount = math.clamp(math.floor(Value), 1, 30)
+addNumberInput(SectionWood1, "Tree Amount", 1, 1, 30, function(v)
+    TreeAmount = v
 end)
 
 local SelectedTree = "Generic"
@@ -891,10 +910,9 @@ SectionSettings1:addKeybind("Toggle UI Keybind", Enum.KeyCode.LeftShift, functio
     Interface:toggle()
 end)
 
--- Pilih halaman pertama saat pertama kali dibuka
 Interface:SelectPage(Interface.pages[1], true)
 
---[[ Independent Floating Custom Ocean Icon (Draggable & Elegant Blue Glow) ]]--
+--[[ Independent Floating Custom Ocean Icon ]]--
 task.spawn(function()
     task.wait(0.5)
     pcall(function()
@@ -908,11 +926,11 @@ task.spawn(function()
         toggleBtn.Name = "ToggleIcon"
         toggleBtn.Size = UDim2.new(0, 48, 0, 48)
         toggleBtn.Position = UDim2.new(0, 15, 0.5, -24)
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(13, 27, 42)
-        toggleBtn.BorderColor3 = Color3.fromRGB(0, 162, 232)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(12, 25, 42)
+        toggleBtn.BorderColor3 = Color3.fromRGB(0, 170, 245)
         toggleBtn.BorderSizePixel = 2
         toggleBtn.Text = "RLX"
-        toggleBtn.TextColor3 = Color3.fromRGB(120, 220, 255)
+        toggleBtn.TextColor3 = Color3.fromRGB(130, 225, 255)
         toggleBtn.TextSize = 14
         toggleBtn.Font = Enum.Font.GothamBold
         toggleBtn.Active = true
@@ -924,12 +942,11 @@ task.spawn(function()
         corner.Parent = toggleBtn
 
         local shadow = Instance.new("UIStroke")
-        shadow.Color = Color3.fromRGB(0, 162, 232)
+        shadow.Color = Color3.fromRGB(0, 170, 245)
         shadow.Transparency = 0.3
         shadow.Thickness = 2
         shadow.Parent = toggleBtn
 
-        -- Ambil objek Frame utama Hub untuk dikontrol buka-tutup
         local mainFrame = nil
         for _, gui in next, CoreGui:GetChildren() do
             if gui:FindFirstChild("Main") then
@@ -950,4 +967,4 @@ task.spawn(function()
     end)
 end)
 
-print("🌊 RLX OCEAN HUB (Enhanced Stability & Ocean Theme) Loaded Successfully!")
+print("🌊 RLX OCEAN HUB | Custom Numeric Inputs Ready & Bug-Free!")
