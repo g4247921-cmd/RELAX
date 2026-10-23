@@ -1,7 +1,7 @@
--- =================================
+-- =================================------------------
 -- DEV -- > RLX FLING ; DISCORD - tankuct.
--- UPDATED -- > v2.2: Spectate View Button + Fast Anti-Fling + Smooth Speed
--- =================================
+-- UPDATED -- > v2.4: Auto-Refresh PlayerList + Fixed Attack All + Fling On Walk
+-- =================================------------------
 
 local Targets = {}
 local Players = game:GetService("Players")
@@ -20,259 +20,289 @@ local originalCanCollide = {}
 local antiFlingEnabled = false
 local antiFlingConnection = nil
 
+local flingOnWalkEnabled = false
+local flingOnWalkConnection = nil
+
 local spectating = false
 
 -- Safely get UI Parent
 local function getUIParent()
-    local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
-    if success and coreGui then
-        return coreGui
-    end
-    return Player:WaitForChild("PlayerGui", 5) or Player:FindFirstChildOfClass("PlayerGui")
+	local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
+	if success and coreGui then
+		return coreGui
+	end
+	return Player:WaitForChild("PlayerGui", 5) or Player:FindFirstChildOfClass("PlayerGui")
 end
 
 local parentGui = getUIParent()
 
 -- Clean up existing UI
 if parentGui:FindFirstChild("FlingControlUI_V2") then
-    parentGui.FlingControlUI_V2:Destroy()
+	parentGui.FlingControlUI_V2:Destroy()
 end
 
 local Message = function(_Title, _Text, Time)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = _Title,
-            Text = _Text,
-            Duration = Time or 3
-        })
-    end)
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = _Title,
+			Text = _Text,
+			Duration = Time or 3
+		})
+	end)
 end
 
 local function resetCamera()
-    pcall(function()
-        local char = Player.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            Workspace.CurrentCamera.CameraSubject = hum
-            Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
-        end
-    end)
+	pcall(function()
+		local char = Player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			Workspace.CurrentCamera.CameraSubject = hum
+			Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+		end
+	end)
 end
 
 local GetPlayer = function(Name)
-    if not Name or Name == "" then return nil end
-    Name = tostring(Name):lower()
-    if Name == "all" or Name == "others" then
-        AllBool = true
-        return nil
-    elseif Name == "random" then
-        local GetPlayers = Players:GetPlayers()
-        for i = #GetPlayers, 1, -1 do
-            if GetPlayers[i] == Player then
-                table.remove(GetPlayers, i)
-            end
-        end
-        if #GetPlayers > 0 then
-            return GetPlayers[math.random(#GetPlayers)]
-        end
-        return nil
-    else
-        for _, x in ipairs(Players:GetPlayers()) do
-            if x ~= Player then
-                if x.Name:lower():sub(1, #Name) == Name or x.DisplayName:lower():sub(1, #Name) == Name then
-                    return x
-                end
-            end
-        end
-    end
-    return nil
+	if not Name or Name == "" then return nil end
+	Name = tostring(Name):lower()
+	if Name == "all" or Name == "others" then
+		AllBool = true
+		return nil
+	elseif Name == "random" then
+		local GetPlayers = Players:GetPlayers()
+		for i = #GetPlayers, 1, -1 do
+			if GetPlayers[i] == Player then
+				table.remove(GetPlayers, i)
+			end
+		end
+		if #GetPlayers > 0 then
+			return GetPlayers[math.random(#GetPlayers)]
+		end
+		return nil
+	else
+		for _, x in ipairs(Players:GetPlayers()) do
+			if x ~= Player then
+				if x.Name:lower():sub(1, #Name) == Name or x.DisplayName:lower():sub(1, #Name) == Name then
+					return x
+				end
+			end
+		end
+	end
+	return nil
 end
 
 -- Noclip Logic
 local function toggleNoclip()
-    noclipEnabled = not noclipEnabled
-    if noclipEnabled then
-        if Player.Character then
-            for _, part in pairs(Player.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    originalCanCollide[part] = part.CanCollide
-                end
-            end
-        end
-        noclipConnection = RunService.Stepped:Connect(function()
-            if Player.Character then
-                for _, part in pairs(Player.Character:GetChildren()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-        Message("Noclip", "Enabled", 3)
-    else
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        if Player.Character then
-            for _, part in pairs(Player.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    local originalValue = originalCanCollide[part]
-                    if originalValue ~= nil then
-                        part.CanCollide = originalValue
-                    else
-                        part.CanCollide = (part.Name ~= "HumanoidRootPart")
-                    end
-                end
-            end
-        end
-        originalCanCollide = {}
-        Message("Noclip", "Disabled", 3)
-    end
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		if Player.Character then
+			for _, part in pairs(Player.Character:GetChildren()) do
+				if part:IsA("BasePart") then
+					originalCanCollide[part] = part.CanCollide
+				end
+			end
+		end
+		noclipConnection = RunService.Stepped:Connect(function()
+			if Player.Character then
+				for _, part in pairs(Player.Character:GetChildren()) do
+					if part:IsA("BasePart") and part.CanCollide then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+		Message("Noclip", "Enabled", 3)
+	else
+		if noclipConnection then
+			noclipConnection:Disconnect()
+			noclipConnection = nil
+		end
+		if Player.Character then
+			for _, part in pairs(Player.Character:GetChildren()) do
+				if part:IsA("BasePart") then
+					local originalValue = originalCanCollide[part]
+					if originalValue ~= nil then
+						part.CanCollide = originalValue
+					else
+						part.CanCollide = (part.Name ~= "HumanoidRootPart")
+					end
+				end
+			end
+		end
+		originalCanCollide = {}
+		Message("Noclip", "Disabled", 3)
+	end
 end
 
--- Lightweight Anti-Fling (Normal Walkspeed preserved)
+-- Lightweight Anti-Fling
 local function toggleAntiFling()
-    antiFlingEnabled = not antiFlingEnabled
-    if antiFlingEnabled then
-        antiFlingConnection = RunService.Stepped:Connect(function()
-            if not antiFlingEnabled then return end
-            pcall(function()
-                local char = Player.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                
-                -- Neutralize violent external velocities pushed onto player
-                if root and root.AssemblyLinearVelocity.Magnitude > 250 then
-                    root.AssemblyLinearVelocity = Vector3.zero
-                    root.AssemblyAngularVelocity = Vector3.zero
-                end
+	antiFlingEnabled = not antiFlingEnabled
+	if antiFlingEnabled then
+		antiFlingConnection = RunService.Stepped:Connect(function()
+			if not antiFlingEnabled then return end
+			pcall(function()
+				local char = Player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				
+				if root and root.AssemblyLinearVelocity.Magnitude > 250 then
+					root.AssemblyLinearVelocity = Vector3.zero
+					root.AssemblyAngularVelocity = Vector3.zero
+				end
 
-                -- Disable collisions with other players without changing player physics properties
-                for _, otherPlayer in ipairs(Players:GetPlayers()) do
-                    if otherPlayer ~= Player and otherPlayer.Character then
-                        for _, otherPart in ipairs(otherPlayer.Character:GetChildren()) do
-                            if otherPart:IsA("BasePart") then
-                                otherPart.CanCollide = false
-                            end
-                        end
-                    end
-                end
-            end)
-        end)
-        Message("Anti-Fling", "Enabled (Normal Speed)", 3)
-    else
-        if antiFlingConnection then
-            antiFlingConnection:Disconnect()
-            antiFlingConnection = nil
-        end
-        Message("Anti-Fling", "Disabled", 3)
-    end
+				for _, otherPlayer in ipairs(Players:GetPlayers()) do
+					if otherPlayer ~= Player and otherPlayer.Character then
+						for _, otherPart in ipairs(otherPlayer.Character:GetChildren()) do
+							if otherPart:IsA("BasePart") then
+								otherPart.CanCollide = false
+							end
+						end
+					end
+				end
+			end)
+		end)
+		Message("Anti-Fling", "Enabled (Normal Speed)", 3)
+	else
+		if antiFlingConnection then
+			antiFlingConnection:Disconnect()
+			antiFlingConnection = nil
+		end
+		Message("Anti-Fling", "Disabled", 3)
+	end
+end
+
+-- Fling On Walk (Jalan biasa, bisa nabrak benda, aman dari fling player lain)
+local function toggleFlingOnWalk()
+	flingOnWalkEnabled = not flingOnWalkEnabled
+	if flingOnWalkEnabled then
+		flingOnWalkConnection = RunService.Stepped:Connect(function()
+			if not flingOnWalkEnabled then return end
+			pcall(function()
+				local char = Player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				
+				if root and root.AssemblyLinearVelocity.Magnitude > 300 then
+					root.AssemblyLinearVelocity = Vector3.new(
+						math.clamp(root.AssemblyLinearVelocity.X, -50, 50),
+						math.clamp(root.AssemblyLinearVelocity.Y, -50, 50),
+						math.clamp(root.AssemblyLinearVelocity.Z, -50, 50)
+					)
+				end
+			end)
+		end)
+		Message("Fling On Walk", "Enabled (Normal Movement & Natural Collision)", 3)
+	else
+		if flingOnWalkConnection then
+			flingOnWalkConnection:Disconnect()
+			flingOnWalkConnection = nil
+		end
+		Message("Fling On Walk", "Disabled", 3)
+	end
 end
 
 -- Ultra Gacor Fling
 local SkidFling = function(TargetPlayer)
-    if not TargetPlayer or not TargetPlayer.Character then return end
-    local Character = Player.Character
-    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
-    local RootPart = Humanoid and Humanoid.RootPart
-    local TCharacter = TargetPlayer.Character
-    local THumanoid = TCharacter and TCharacter:FindFirstChildOfClass("Humanoid")
-    local TRootPart = THumanoid and THumanoid.RootPart
-    local THead = TCharacter:FindFirstChild("Head")
-    local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
-    local Handle = Accessory and Accessory:FindFirstChild("Handle")
+	if not TargetPlayer or not TargetPlayer.Character then return end
+	local Character = Player.Character
+	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+	local RootPart = Humanoid and Humanoid.RootPart
+	local TCharacter = TargetPlayer.Character
+	local THumanoid = TCharacter and TCharacter:FindFirstChildOfClass("Humanoid")
+	local TRootPart = THumanoid and THumanoid.RootPart
+	local THead = TCharacter:FindFirstChild("Head")
+	local Accessory = TCharacter:FindFirstChildOfClass("Accessory")
+	local Handle = Accessory and Accessory:FindFirstChild("Handle")
 
-    if Character and Humanoid and RootPart then
-        if RootPart.Velocity.Magnitude < 50 then
-            getgenv().OldPos = RootPart.CFrame
-        end
-        if THumanoid and THumanoid.Sit and not AllBool then
-            return Message("Error", "Target is sitting", 4)
-        end
+	if Character and Humanoid and RootPart then
+		if RootPart.Velocity.Magnitude < 50 then
+			getgenv().OldPos = RootPart.CFrame
+		end
+		if THumanoid and THumanoid.Sit and not AllBool then
+			return Message("Error", "Target is sitting", 4)
+		end
 
-        pcall(function()
-            if THead then
-                Workspace.CurrentCamera.CameraSubject = THead
-            elseif Handle then
-                Workspace.CurrentCamera.CameraSubject = Handle
-            elseif THumanoid then
-                Workspace.CurrentCamera.CameraSubject = THumanoid
-            end
-        end)
+		pcall(function()
+			if THead then
+				Workspace.CurrentCamera.CameraSubject = THead
+			elseif Handle then
+				Workspace.CurrentCamera.CameraSubject = Handle
+			elseif THumanoid then
+				Workspace.CurrentCamera.CameraSubject = THumanoid
+			end
+		end)
 
-        local FPos = function(BasePart, Pos, Ang)
-            RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
-            Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
-            RootPart.Velocity = Vector3.new(9e15, 9e15, 9e15)
-            RootPart.RotVelocity = Vector3.new(9e15, 9e15, 9e15)
-        end
+		local FPos = function(BasePart, Pos, Ang)
+			RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+			Character:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+			RootPart.Velocity = Vector3.new(9e15, 9e15, 9e15)
+			RootPart.RotVelocity = Vector3.new(9e15, 9e15, 9e15)
+		end
 
-        local SFBasePart = function(BasePart)
-            local TimeToWait = 2.5
-            local Time = tick()
-            local Angle = 0
-            repeat
-                if RootPart and THumanoid then
-                    Angle = Angle + 120
-                    FPos(BasePart, CFrame.new(0, 1.2, 0) + THumanoid.MoveDirection * 2, CFrame.Angles(math.rad(Angle), math.rad(Angle), 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(0, -1.2, 0) + THumanoid.MoveDirection * 2, CFrame.Angles(math.rad(Angle), 0, math.rad(Angle)))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(2, 1.2, -2), CFrame.Angles(0, math.rad(Angle), 0))
-                    task.wait()
-                    FPos(BasePart, CFrame.new(-2, -1.2, 2), CFrame.Angles(math.rad(Angle), math.rad(Angle), math.rad(Angle)))
-                    task.wait()
-                else
-                    break
-                end
-            until BasePart.Velocity.Magnitude > 800 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
-        end
+		local SFBasePart = function(BasePart)
+			local TimeToWait = 2.5
+			local Time = tick()
+			local Angle = 0
+			repeat
+				if RootPart and THumanoid then
+					Angle = Angle + 120
+					FPos(BasePart, CFrame.new(0, 1.2, 0) + THumanoid.MoveDirection * 2, CFrame.Angles(math.rad(Angle), math.rad(Angle), 0))
+					task.wait()
+					FPos(BasePart, CFrame.new(0, -1.2, 0) + THumanoid.MoveDirection * 2, CFrame.Angles(math.rad(Angle), 0, math.rad(Angle)))
+					task.wait()
+					FPos(BasePart, CFrame.new(2, 1.2, -2), CFrame.Angles(0, math.rad(Angle), 0))
+					task.wait()
+					FPos(BasePart, CFrame.new(-2, -1.2, 2), CFrame.Angles(math.rad(Angle), math.rad(Angle), math.rad(Angle)))
+					task.wait()
+				else
+					break
+				end
+			until BasePart.Velocity.Magnitude > 800 or BasePart.Parent ~= TargetPlayer.Character or TargetPlayer.Parent ~= Players or THumanoid.Sit or Humanoid.Health <= 0 or tick() > Time + TimeToWait
+		end
 
-        Workspace.FallenPartsDestroyHeight = 0/0
-        local BV = Instance.new("BodyVelocity")
-        BV.Name = "GacorVel"
-        BV.Parent = RootPart
-        BV.Velocity = Vector3.new(9e15, 9e15, 9e15)
-        BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
-        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+		Workspace.FallenPartsDestroyHeight = 0/0
+		local BV = Instance.new("BodyVelocity")
+		BV.Name = "GacorVel"
+		BV.Parent = RootPart
+		BV.Velocity = Vector3.new(9e15, 9e15, 9e15)
+		BV.MaxForce = Vector3.new(1/0, 1/0, 1/0)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 
-        if TRootPart and THead then
-            if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
-                SFBasePart(THead)
-            else
-                SFBasePart(TRootPart)
-            end
-        elseif TRootPart then
-            SFBasePart(TRootPart)
-        elseif THead then
-            SFBasePart(THead)
-        elseif Accessory and Handle then
-            SFBasePart(Handle)
-        end
+		if TRootPart and THead then
+			if (TRootPart.CFrame.p - THead.CFrame.p).Magnitude > 5 then
+				SFBasePart(THead)
+			else
+				SFBasePart(TRootPart)
+			end
+		elseif TRootPart then
+			SFBasePart(TRootPart)
+		elseif THead then
+			SFBasePart(THead)
+		elseif Accessory and Handle then
+			SFBasePart(Handle)
+		end
 
-        BV:Destroy()
-        Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-        
-        if not spectating then
-            resetCamera()
-        end
+		BV:Destroy()
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+		
+		if not spectating then
+			resetCamera()
+		end
 
-        repeat
-            RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
-            Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
-            Humanoid:ChangeState("GettingUp")
-            for _, x in ipairs(Character:GetChildren()) do
-                if x:IsA("BasePart") then
-                    x.Velocity, x.RotVelocity = Vector3.zero, Vector3.zero
-                end
-            end
-            task.wait()
-        until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
-    end
+		repeat
+			RootPart.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+			Character:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+			Humanoid:ChangeState("GettingUp")
+			for _, x in ipairs(Character:GetChildren()) do
+				if x:IsA("BasePart") then
+					x.Velocity, x.RotVelocity = Vector3.zero, Vector3.zero
+				end
+			end
+			task.wait()
+		until (RootPart.Position - getgenv().OldPos.p).Magnitude < 25
+	end
 end
 
 -- =================================
--- UI CREATION
+-- UI CREATION (Dengan PlayerList Auto-Refresh)
 -- =================================
 
 local screenGui = Instance.new("ScreenGui")
@@ -297,11 +327,11 @@ local toggleStroke = Instance.new("UIStroke", toggleBtn)
 toggleStroke.Color = Color3.fromRGB(45, 50, 65)
 toggleStroke.Thickness = 2
 
--- Main Frame
+-- Main Frame (Diperlebar ke samping untuk mengakomodasi PlayerList)
 local frame = Instance.new("Frame")
 frame.Name = "MainFrame"
-frame.Size = UDim2.new(0, 320, 0, 310)
-frame.Position = UDim2.new(0.5, -160, 0.4, -155)
+frame.Size = UDim2.new(0, 520, 0, 355)
+frame.Position = UDim2.new(0.5, -260, 0.4, -177)
 frame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
 frame.BorderSizePixel = 0
 frame.ClipsDescendants = true
@@ -329,7 +359,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -50, 1, 0)
 title.Position = UDim2.new(0, 12, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "RLX FLING <font color=\"#00C8FF\">v2.2</font>"
+title.Text = "RLX FLING <font color=\"#00C8FF\">v2.4</font>"
 title.RichText = true
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
@@ -350,11 +380,18 @@ closeBtn.Parent = header
 local closeCorner = Instance.new("UICorner", closeBtn)
 closeCorner.CornerRadius = UDim.new(0, 6)
 
+-- Left Panel (Controls)
+local leftPanel = Instance.new("Frame")
+leftPanel.Size = UDim2.new(0, 300, 1, -50)
+leftPanel.Position = UDim2.new(0, 0, 0, 45)
+leftPanel.BackgroundTransparency = 1
+leftPanel.Parent = frame
+
 -- Search Box
 local searchBox = Instance.new("TextBox")
 searchBox.Name = "SearchBox"
 searchBox.Size = UDim2.new(1, -24, 0, 36)
-searchBox.Position = UDim2.new(0, 12, 0, 50)
+searchBox.Position = UDim2.new(0, 12, 0, 5)
 searchBox.Text = ""
 searchBox.PlaceholderText = "Type Username or DisplayName..."
 searchBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 140)
@@ -364,7 +401,7 @@ searchBox.ClearTextOnFocus = false
 searchBox.Font = Enum.Font.GothamMedium
 searchBox.TextSize = 13
 searchBox.TextXAlignment = Enum.TextXAlignment.Left
-searchBox.Parent = frame
+searchBox.Parent = leftPanel
 
 local searchPadding = Instance.new("UIPadding", searchBox)
 searchPadding.PaddingLeft = UDim.new(0, 10)
@@ -379,9 +416,9 @@ searchStroke.Color = Color3.fromRGB(40, 45, 60)
 local avaCard = Instance.new("Frame")
 avaCard.Name = "AvatarCard"
 avaCard.Size = UDim2.new(1, -24, 0, 55)
-avaCard.Position = UDim2.new(0, 12, 0, 94)
+avaCard.Position = UDim2.new(0, 12, 0, 49)
 avaCard.BackgroundColor3 = Color3.fromRGB(25, 28, 38)
-avaCard.Parent = frame
+avaCard.Parent = leftPanel
 
 local cardCorner = Instance.new("UICorner", avaCard)
 cardCorner.CornerRadius = UDim.new(0, 8)
@@ -418,41 +455,41 @@ userNameLbl.TextColor3 = Color3.fromRGB(130, 135, 150)
 userNameLbl.TextXAlignment = Enum.TextXAlignment.Left
 userNameLbl.Parent = avaCard
 
--- Buttons
-local function createButton(text, pos, size)
-    local btn = Instance.new("TextButton")
-    btn.Size = size
-    btn.Position = pos
-    btn.Text = text
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
-    btn.TextColor3 = Color3.fromRGB(220, 225, 240)
-    btn.Parent = frame
-    
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 8)
-    
-    local stroke = Instance.new("UIStroke", btn)
-    stroke.Color = Color3.fromRGB(45, 50, 68)
-    
-    return btn
+-- Buttons Helper
+local function createButton(text, pos, size, parent)
+	local btn = Instance.new("TextButton")
+	btn.Size = size
+	btn.Position = pos
+	btn.Text = text
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 11
+	btn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
+	btn.TextColor3 = Color3.fromRGB(220, 225, 240)
+	btn.Parent = parent
+	
+	local corner = Instance.new("UICorner", btn)
+	corner.CornerRadius = UDim.new(0, 8)
+	
+	local stroke = Instance.new("UIStroke", btn)
+	stroke.Color = Color3.fromRGB(45, 50, 68)
+	
+	return btn
 end
 
--- Grid Layout Buttons
-local attackBtn = createButton("ATTACK", UDim2.new(0, 12, 0, 158), UDim2.new(0.48, -6, 0, 36))
+-- Layout Tombol Kontrol
+local attackBtn = createButton("ATTACK", UDim2.new(0, 12, 0, 113), UDim2.new(0.48, -6, 0, 34), leftPanel)
 attackBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 50)
 attackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local spectateBtn = createButton("SPECTATE", UDim2.new(0.52, 0, 0, 158), UDim2.new(0.48, -6, 0, 36))
+local spectateBtn = createButton("SPECTATE", UDim2.new(0.52, 0, 0, 113), UDim2.new(0.48, -6, 0, 34), leftPanel)
 spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
 spectateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local allBtn = createButton("Attack All: OFF", UDim2.new(0, 12, 0, 202), UDim2.new(1, -24, 0, 34))
-local noclipBtn = createButton("Noclip: OFF", UDim2.new(0, 12, 0, 244), UDim2.new(0.48, -6, 0, 34))
-local antiFlingBtn = createButton("Anti-Fling: OFF", UDim2.new(0.52, 0, 0, 244), UDim2.new(0.48, -6, 0, 34))
+local allBtn = createButton("Attack All: OFF", UDim2.new(0, 12, 0, 153), UDim2.new(1, -24, 0, 32), leftPanel)
+local noclipBtn = createButton("Noclip: OFF", UDim2.new(0, 12, 0, 191), UDim2.new(0.48, -6, 0, 32), leftPanel)
+local antiFlingBtn = createButton("Anti-Fling: OFF", UDim2.new(0.52, 0, 0, 191), UDim2.new(0.48, -6, 0, 32), leftPanel)
+local flingOnWalkBtn = createButton("Fling On Walk: OFF", UDim2.new(0, 12, 0, 229), UDim2.new(1, -24, 0, 32), leftPanel)
 
--- Footer
 local footer = Instance.new("TextLabel")
 footer.Size = UDim2.new(1, 0, 0, 18)
 footer.Position = UDim2.new(0, 0, 1, -20)
@@ -461,179 +498,269 @@ footer.Text = "DEV: RLX FLING | DC: Anjaszrelaxz"
 footer.Font = Enum.Font.GothamMedium
 footer.TextSize = 10
 footer.TextColor3 = Color3.fromRGB(80, 85, 100)
-footer.Parent = frame
+footer.Parent = leftPanel
 
 -- =================================
--- UI EVENTS
+-- RIGHT PANEL: LIVE PLAYER LIST (Auto-Refresh)
+-- =================================
+
+local rightPanel = Instance.new("Frame")
+rightPanel.Size = UDim2.new(0, 205, 1, -55)
+rightPanel.Position = UDim2.new(0, 305, 0, 45)
+rightPanel.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+rightPanel.Parent = frame
+
+local rightCorner = Instance.new("UICorner", rightPanel)
+rightCorner.CornerRadius = UDim.new(0, 8)
+
+local rightStroke = Instance.new("UIStroke", rightPanel)
+rightStroke.Color = Color3.fromRGB(38, 43, 58)
+
+local listTitle = Instance.new("TextLabel")
+listTitle.Size = UDim2.new(1, 0, 0, 28)
+listTitle.Position = UDim2.new(0, 0, 0, 2)
+listTitle.BackgroundTransparency = 1
+listTitle.Text = "ONLINE PLAYERS"
+listTitle.Font = Enum.Font.GothamBold
+listTitle.TextSize = 11
+listTitle.TextColor3 = Color3.fromRGB(150, 160, 180)
+listTitle.Parent = rightPanel
+
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, -8, 1, -35)
+scrollingFrame.Position = UDim2.new(0, 4, 0, 32)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollingFrame.ScrollBarThickness = 4
+scrollingFrame.Parent = rightPanel
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Padding = UDim.new(0, 4)
+uiListLayout.Parent = scrollingFrame
+
+-- Fungsi untuk memperbarui PlayerList secara otomatis & rapi
+local function refreshPlayerList()
+	-- Bersihkan list lama
+	for _, child in ipairs(scrollingFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	-- Buat tombol untuk setiap player
+	for _, pl in ipairs(Players:GetPlayers()) do
+		if pl ~= Player then
+			local pBtn = Instance.new("TextButton")
+			pBtn.Size = UDim2.new(1, 0, 0, 28)
+			pBtn.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
+			pBtn.Text = "  " .. pl.DisplayName .. " (@" .. pl.Name .. ")"
+			pBtn.Font = Enum.Font.GothamMedium
+			pBtn.TextSize = 11
+			pBtn.TextColor3 = Color3.fromRGB(220, 225, 240)
+			pBtn.TextXAlignment = Enum.TextXAlignment.Left
+			pBtn.Parent = scrollingFrame
+
+			local btnCorner = Instance.new("UICorner", pBtn)
+			btnCorner.CornerRadius = UDim.new(0, 6)
+
+			-- Klik player di list untuk otomatis memilihnya sebagai target
+			pBtn.MouseButton1Click:Connect(function()
+				searchBox.Text = pl.Name
+			end)
+		end
+	end
+end
+
+-- Sambungkan event auto-refresh saat player masuk atau keluar server
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
+-- Panggil pertama kali saat UI dimuat
+refreshPlayerList()
+
+-- =================================
+-- UI EVENTS & LOGIC
 -- =================================
 
 -- Dragging
 local dragging, dragStart, startPos
 header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
 end)
 
--- Open/Close
+-- Open/Close UI
 local uiVisible = true
 local function toggleUI()
-    uiVisible = not uiVisible
-    frame.Visible = uiVisible
+	uiVisible = not uiVisible
+	frame.Visible = uiVisible
 end
 
 toggleBtn.MouseButton1Click:Connect(toggleUI)
 closeBtn.MouseButton1Click:Connect(toggleUI)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
-        toggleUI()
-    end
+	if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
+		toggleUI()
+	end
 end)
 
 -- Auto Search & Realtime Headshot Avatar
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local text = searchBox.Text
-    if text == "" then
-        SelectedTarget = nil
-        dispNameLbl.Text = "No Target Selected"
-        userNameLbl.Text = "@none"
-        avaImg.Image = "rbxassetid://0"
-        if spectating then
-            spectating = false
-            spectateBtn.Text = "SPECTATE"
-            spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
-            resetCamera()
-        end
-        return
-    end
+	local text = searchBox.Text
+	if text == "" then
+		SelectedTarget = nil
+		dispNameLbl.Text = "No Target Selected"
+		userNameLbl.Text = "@none"
+		avaImg.Image = "rbxassetid://0"
+		if spectating then
+			spectating = false
+			spectateBtn.Text = "SPECTATE"
+			spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
+			resetCamera()
+		end
+		return
+	end
 
-    if text:lower() == "all" or text:lower() == "others" then
-        dispNameLbl.Text = "ALL PLAYERS"
-        userNameLbl.Text = "@everyone"
-        avaImg.Image = "rbxassetid://6031075931"
-        SelectedTarget = "all"
-        return
-    elseif text:lower() == "random" then
-        dispNameLbl.Text = "RANDOM PLAYER"
-        userNameLbl.Text = "@random"
-        avaImg.Image = "rbxassetid://6031075931"
-        SelectedTarget = "random"
-        return
-    end
+	if text:lower() == "all" or text:lower() == "others" then
+		dispNameLbl.Text = "ALL PLAYERS"
+		userNameLbl.Text = "@everyone"
+		avaImg.Image = "rbxassetid://6031075931"
+		SelectedTarget = "all"
+		return
+	elseif text:lower() == "random" then
+		dispNameLbl.Text = "RANDOM PLAYER"
+		userNameLbl.Text = "@random"
+		avaImg.Image = "rbxassetid://6031075931"
+		SelectedTarget = "random"
+		return
+	end
 
-    local found = GetPlayer(text)
-    if found then
-        SelectedTarget = found
-        dispNameLbl.Text = found.DisplayName
-        userNameLbl.Text = "@" .. found.Name
-        task.spawn(function()
-            pcall(function()
-                local content, isLoaded = Players:GetUserThumbnailAsync(found.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-                if isLoaded and SelectedTarget == found then
-                    avaImg.Image = content
-                end
-            end)
-        end)
-    else
-        SelectedTarget = nil
-        dispNameLbl.Text = "Player Not Found"
-        userNameLbl.Text = "@none"
-        avaImg.Image = "rbxassetid://0"
-    end
+	local found = GetPlayer(text)
+	if found then
+		SelectedTarget = found
+		dispNameLbl.Text = found.DisplayName
+		userNameLbl.Text = "@" .. found.Name
+		task.spawn(function()
+			pcall(function()
+				local content, isLoaded = Players:GetUserThumbnailAsync(found.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+				if isLoaded and SelectedTarget == found then
+					avaImg.Image = content
+				end
+			end)
+		end)
+	else
+		SelectedTarget = nil
+		dispNameLbl.Text = "Player Not Found"
+		userNameLbl.Text = "@none"
+		avaImg.Image = "rbxassetid://0"
+	end
 end)
 
 -- Spectate View Camera Toggle
 spectateBtn.MouseButton1Click:Connect(function()
-    if spectating then
-        spectating = false
-        spectateBtn.Text = "SPECTATE"
-        spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
-        resetCamera()
-        Message("Camera", "Reset to Local Player", 3)
-    else
-        local target = SelectedTarget
-        if typeof(target) ~= "Instance" or not target:IsA("Player") then
-            target = GetPlayer(searchBox.Text)
-        end
+	if spectating then
+		spectating = false
+		spectateBtn.Text = "SPECTATE"
+		spectateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
+		resetCamera()
+		Message("Camera", "Reset to Local Player", 3)
+	else
+		local target = SelectedTarget
+		if typeof(target) ~= "Instance" or not target:IsA("Player") then
+			target = GetPlayer(searchBox.Text)
+		end
 
-        if target and target.Character and target.Character:FindFirstChildOfClass("Humanoid") then
-            spectating = true
-            spectateBtn.Text = "UNSPECTATE"
-            spectateBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
-            Workspace.CurrentCamera.CameraSubject = target.Character:FindFirstChildOfClass("Humanoid")
-            Message("Spectating", target.DisplayName, 3)
-        else
-            Message("Error", "Select a valid target player first!", 4)
-        end
-    end
+		if target and target.Character and target.Character:FindFirstChildOfClass("Humanoid") then
+			spectating = true
+			spectateBtn.Text = "UNSPECTATE"
+			spectateBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+			Workspace.CurrentCamera.CameraSubject = target.Character:FindFirstChildOfClass("Humanoid")
+			Message("Spectating", target.DisplayName, 3)
+		else
+			Message("Error", "Select a valid target player first!", 4)
+		end
+	end
 end)
 
 -- Toggles
 local allState = false
 allBtn.MouseButton1Click:Connect(function()
-    allState = not allState
-    allBtn.Text = allState and "Attack All: ON" or "Attack All: OFF"
-    allBtn.BackgroundColor3 = allState and Color3.fromRGB(150, 40, 50) or Color3.fromRGB(32, 36, 48)
+	allState = not allState
+	allBtn.Text = allState and "Attack All: ON" or "Attack All: OFF"
+	allBtn.BackgroundColor3 = allState and Color3.fromRGB(150, 40, 50) or Color3.fromRGB(32, 36, 48)
 end)
 
 noclipBtn.MouseButton1Click:Connect(function()
-    toggleNoclip()
-    noclipBtn.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
-    noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(0, 140, 100) or Color3.fromRGB(32, 36, 48)
+	toggleNoclip()
+	noclipBtn.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+	noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(0, 140, 100) or Color3.fromRGB(32, 36, 48)
 end)
 
 antiFlingBtn.MouseButton1Click:Connect(function()
-    toggleAntiFling()
-    antiFlingBtn.Text = antiFlingEnabled and "Anti-Fling: ON" or "Anti-Fling: OFF"
-    antiFlingBtn.BackgroundColor3 = antiFlingEnabled and Color3.fromRGB(0, 140, 100) or Color3.fromRGB(32, 36, 48)
+	toggleAntiFling()
+	antiFlingBtn.Text = antiFlingEnabled and "Anti-Fling: ON" or "Anti-Fling: OFF"
+	antiFlingBtn.BackgroundColor3 = antiFlingEnabled and Color3.fromRGB(0, 140, 100) or Color3.fromRGB(32, 36, 48)
+end)
+
+flingOnWalkBtn.MouseButton1Click:Connect(function()
+	toggleFlingOnWalk()
+	flingOnWalkBtn.Text = flingOnWalkEnabled and "Fling On Walk: ON" or "Fling On Walk: OFF"
+	flingOnWalkBtn.BackgroundColor3 = flingOnWalkEnabled and Color3.fromRGB(0, 140, 100) or Color3.fromRGB(32, 36, 48)
 end)
 
 -- Attack Trigger
 attackBtn.MouseButton1Click:Connect(function()
-    local name = tostring(searchBox.Text or "")
-    
-    if allState or name:lower() == "all" or name:lower() == "others" or SelectedTarget == "all" then
-        AllBool = true
-        for _, pl in ipairs(Players:GetPlayers()) do
-            if pl ~= Player then
-                pcall(function() SkidFling(pl) end)
-            end
-        end
-        return
-    elseif name:lower() == "random" or SelectedTarget == "random" then
-        local target = GetPlayer("random")
-        if target then
-            pcall(function() SkidFling(target) end)
-        end
-        return
-    end
+	local name = tostring(searchBox.Text or "")
+	
+	if allState or name:lower() == "all" or name:lower() == "others" or SelectedTarget == "all" then
+		AllBool = true
+		for _, pl in ipairs(Players:GetPlayers()) do
+			if pl ~= Player then
+				pcall(function() SkidFling(pl) end)
+			end
+		end
+		AllBool = false
+		return
+	elseif name:lower() == "random" or SelectedTarget == "random" then
+		AllBool = false
+		local target = GetPlayer("random")
+		if target then
+			pcall(function() SkidFling(target) end)
+		end
+		return
+	end
 
-    local target = GetPlayer(name) or (typeof(SelectedTarget) == "Instance" and SelectedTarget)
-    if target and target ~= Player then
-        if target.UserId ~= 1414978355 then
-            pcall(function() SkidFling(target) end)
-        else
-            Message("Error Occurred", "This user is whitelisted! (Owner)", 5)
-        end
-    else
-        Message("Error Occurred", "Username Invalid", 5)
-    end
+	AllBool = false
+	local target = GetPlayer(name) or (typeof(SelectedTarget) == "Instance" and SelectedTarget)
+	if target and target ~= Player then
+		if target.UserId ~= 1414978355 then
+			pcall(function() SkidFling(target) end)
+		else
+			Message("Error Occurred", "This user is whitelisted! (Owner)", 5)
+		end
+	else
+		Message("Error Occurred", "Username Invalid", 5)
+	end
 end)
 
-Message("RLX FLING", "Loaded v2.2! Added Spectate Camera & Fast Anti-Fling.", 5)
+Message("RLX FLING", "Loaded v2.4! Live Auto-Refresh PlayerList Added.", 5)
